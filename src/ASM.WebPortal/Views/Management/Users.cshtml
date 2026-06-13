@@ -1,0 +1,44 @@
+@model UsersPageViewModel
+@{
+    ViewData["Title"] = "Users";
+}
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="panel-card p-4">
+            <form asp-action="CreateUser" method="post" class="form-grid">
+                <input asp-for="UserName" class="form-control" placeholder="Username" />
+                <input asp-for="FullName" class="form-control" placeholder="Full name" />
+                <input asp-for="Email" class="form-control" placeholder="Email" />
+                <input asp-for="Password" class="form-control" placeholder="Password" />
+                <select asp-for="Role" class="form-select">
+                    <option>Manager</option>
+                    <option>Staff</option>
+                </select>
+                <button class="btn btn-dark">Save User</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="panel-card p-4">
+            <table class="table">
+                <thead><tr><th>User</th><th>Role</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var user in Model.Users)
+                {
+                    <tr>
+                        <td><div>@user.FullName</div><div class="small text-muted">@user.UserName</div></td>
+                        <td>@user.Role</td>
+                        <td>@(user.IsActive ? "Active" : "Locked")</td>
+                        <td>
+                            <form asp-action="ToggleUser" method="post">
+                                <input type="hidden" name="userId" value="@user.Id" />
+                                <button class="btn btn-sm btn-outline-dark">Toggle</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

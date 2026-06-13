@@ -1,0 +1,241 @@
+@using System.Linq
+@model DashboardPageViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+    var recentOrders = Model.InboundOrders
+        .Select(order => new
+        {
+            Type = "Inbound",
+            order.ReferenceCode,
+            order.WarehouseName,
+            order.AssignedToUserName,
+            order.Status,
+            order.CreatedAtUtc
+        })
+        .Concat(Model.OutboundOrders.Select(order => new
+        {
+            Type = "Outbound",
+            order.ReferenceCode,
+            order.WarehouseName,
+            order.AssignedToUserName,
+            order.Status,
+            order.CreatedAtUtc
+        }))
+        .OrderByDescending(order => order.CreatedAtUtc)
+        .Take(6)
+        .ToList();
+
+    var completedOrders = Model.InboundOrders.Count(order => order.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase))
+        + Model.OutboundOrders.Count(order => order.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase));
+    var totalOrders = Model.InboundOrders.Count + Model.OutboundOrders.Count;
+    var completionRate = totalOrders == 0 ? 0 : (int)Math.Round((double)completedOrders * 100 / totalOrders);
+    var activeAlerts = Model.Summary.Alerts.Count;
+}
+
+<section class="dashboard-hero mb-4">
+    <div class="hero-card p-4 p-md-5">
+        <div class="dashboard-hero-grid">
+            <div>
+                <p class="text-uppercase small text-muted mb-2">Warehouse Command Center</p>
+                <h1 class="display-6 mb-2">ASM WMS Operations Dashboard</h1>
+                <p class="text-muted mb-0">Theo dõi cấu trúc kho, tiến độ nhập xuất và tín hiệu vận hành trong một màn hình rõ ràng hơn cho demo và quản lý hàng ngày.</p>
+            </div>
+            <div class="dashboard-hero-actions">
+                <a class="btn btn-dark" asp-controller="Orders" asp-action="Inbound">Create Inbound</a>
+                <a class="btn btn-outline-dark" asp-controller="Orders" asp-action="Outbound">Create Outbound</a>
+                <a class="btn btn-outline-secondary" asp-controller="Management" asp-action="Layout">Open Layout</a>
+            </div>
+        </div>
+
+        <div class="dashboard-signal-strip mt-4">
+            <div class="dashboard-signal-card">
+                <div class="dashboard-signal-label">Order completion</div>
+                <div class="dashboard-signal-value">@completionRate%</div>
+            </div>
+            <div class="dashboard-signal-card">
+                <div class="dashboard-signal-label">Open alerts</div>
+                <div class="dashboard-signal-value">@activeAlerts</div>
+            </div>
+            <div class="dashboard-signal-card">
+                <div class="dashboard-signal-label">Recent orders</div>
+                <div class="dashboard-signal-value">@recentOrders.Count</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="dashboard-metric-grid mb-4">
+    <article class="metric-card metric-card-sand">
+        <div class="dashboard-metric-label">Warehouses</div>
+        <div class="dashboard-metric-value">@Model.Summary.WarehouseCount</div>
+        <div class="dashboard-metric-note">Active warehouse records</div>
+    </article>
+    <article class="metric-card metric-card-navy">
+        <div class="dashboard-metric-label">Products</div>
+        <div class="dashboard-metric-value">@Model.Summary.ProductCount</div>
+        <div class="dashboard-metric-note">Catalog SKUs in system</div>
+    </article>
+    <article class="metric-card metric-card-green">
+        <div class="dashboard-metric-label">Active Pallets</div>
+        <div class="dashboard-metric-value">@Model.Summary.ActivePalletCount</div>
+        <div class="dashboard-metric-note">Pallets currently in use</div>
+    </article>
+    <article class="metric-card metric-card-gold">
+        <div class="dashboard-metric-label">Pending Inbound</div>
+        <div class="dashboard-metric-value">@Model.Summary.PendingInboundCount</div>
+        <div class="dashboard-metric-note">Orders waiting for put-away</div>
+    </article>
+    <article class="metric-card metric-card-rust">
+        <div class="dashboard-metric-label">Pending Outbound</div>
+        <div class="dashboard-metric-value">@Model.Summary.PendingOutboundCount</div>
+        <div class="dashboard-metric-note">Orders waiting for picking</div>
+    </article>
+    <article class="metric-card metric-card-slate">
+        <div class="dashboard-metric-label">Pending Tasks</div>
+        <div class="dashboard-metric-value">@Model.Summary.PendingTaskCount</div>
+        <div class="dashboard-metric-note">Assigned staff actions</div>
+    </article>
+</section>
+
+<section class="row g-4 mb-4">
+    <div class="col-lg-5">
+        <div class="panel-card p-4 h-100">
+            <div class="dashboard-section-head">
+                <div>
+                    <div class="dashboard-section-title">Operational Signals</div>
+                    <div class="dashboard-section-subtitle">Summary cards for quick decision making</div>
+                </div>
+            </div>
+
+            <div class="dashboard-operational-grid">
+                <article class="dashboard-info-card">
+                    <div class="dashboard-info-label">Inbound flow</div>
+                    <div class="dashboard-info-main">@Model.Summary.PendingInboundCount</div>
+                    <div class="dashboard-info-note">orders are waiting for warehouse staff</div>
+                </article>
+                <article class="dashboard-info-card">
+                    <div class="dashboard-info-label">Outbound flow</div>
+                    <div class="dashboard-info-main">@Model.Summary.PendingOutboundCount</div>
+                    <div class="dashboard-info-note">orders are queued for picking</div>
+                </article>
+                <article class="dashboard-info-card">
+                    <div class="dashboard-info-label">Task queue</div>
+                    <div class="dashboard-info-main">@Model.Summary.PendingTaskCount</div>
+                    <div class="dashboard-info-note">staff tasks not completed yet</div>
+                </article>
+                <article class="dashboard-info-card">
+                    <div class="dashboard-info-label">Warehouse coverage</div>
+                    <div class="dashboard-info-main">@Model.Summary.WarehouseCount</div>
+                    <div class="dashboard-info-note">managed warehouse instances</div>
+                </article>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="panel-card p-4 h-100">
+            <div class="dashboard-section-head">
+                <div>
+                    <div class="dashboard-section-title">Recent Orders</div>
+                    <div class="dashboard-section-subtitle">Inbound and outbound records sorted by latest activity</div>
+                </div>
+                <a class="btn btn-sm btn-outline-dark" asp-controller="Orders" asp-action="Inbound">Order workspace</a>
+            </div>
+
+            @if (recentOrders.Any())
+            {
+                <div class="dashboard-order-feed">
+                    @foreach (var order in recentOrders)
+                    {
+                        <article class="dashboard-order-card">
+                            <div class="dashboard-order-top">
+                                <div>
+                                    <div class="dashboard-order-type @(order.Type == "Inbound" ? "inbound" : "outbound")">@order.Type</div>
+                                    <div class="dashboard-order-code">@order.ReferenceCode</div>
+                                </div>
+                                <span class="dashboard-status-pill @order.Status.ToLowerInvariant()">@order.Status</span>
+                            </div>
+                            <div class="dashboard-order-meta">
+                                <span>@order.WarehouseName</span>
+                                <span>@order.AssignedToUserName</span>
+                                <span>@order.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="layout-empty-state">No recent inbound or outbound orders yet.</div>
+            }
+        </div>
+    </div>
+</section>
+
+<section class="row g-4">
+    <div class="col-lg-6">
+        <div class="panel-card p-4 h-100">
+            <div class="dashboard-section-head">
+                <div>
+                    <div class="dashboard-section-title">Alerts</div>
+                    <div class="dashboard-section-subtitle">Scan mismatch and operational warnings for quick review</div>
+                </div>
+            </div>
+
+            @if (Model.Summary.Alerts.Any())
+            {
+                <div class="dashboard-alert-list">
+                    @foreach (var alert in Model.Summary.Alerts)
+                    {
+                        <article class="dashboard-alert-card">
+                            <div class="dashboard-alert-title">@alert.Title</div>
+                            <div class="dashboard-alert-detail">@alert.Detail</div>
+                        </article>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="layout-empty-state">Chưa có cảnh báo mới. Luồng kho hiện đang ổn định.</div>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="panel-card p-4 h-100">
+            <div class="dashboard-section-head">
+                <div>
+                    <div class="dashboard-section-title">Quick Access</div>
+                    <div class="dashboard-section-subtitle">Shortcuts to the most-used management areas</div>
+                </div>
+            </div>
+
+            <div class="dashboard-quick-grid">
+                <a class="dashboard-quick-card" asp-controller="Management" asp-action="Warehouses">
+                    <div class="dashboard-quick-title">Warehouses</div>
+                    <div class="dashboard-quick-note">Manage warehouse profiles and QR</div>
+                </a>
+                <a class="dashboard-quick-card" asp-controller="Management" asp-action="Layout">
+                    <div class="dashboard-quick-title">Layout</div>
+                    <div class="dashboard-quick-note">Areas, racks, slots and pallet mapping</div>
+                </a>
+                <a class="dashboard-quick-card" asp-controller="Management" asp-action="Products">
+                    <div class="dashboard-quick-title">Products</div>
+                    <div class="dashboard-quick-note">SKU catalog and product QR labels</div>
+                </a>
+                <a class="dashboard-quick-card" asp-controller="Management" asp-action="Pallets">
+                    <div class="dashboard-quick-title">Pallets</div>
+                    <div class="dashboard-quick-note">Track pallet status and storage usage</div>
+                </a>
+                <a class="dashboard-quick-card" asp-controller="Orders" asp-action="Inbound">
+                    <div class="dashboard-quick-title">Inbound Orders</div>
+                    <div class="dashboard-quick-note">Create and review inbound execution</div>
+                </a>
+                <a class="dashboard-quick-card" asp-controller="Orders" asp-action="Outbound">
+                    <div class="dashboard-quick-title">Outbound Orders</div>
+                    <div class="dashboard-quick-note">Create and review outbound picking</div>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>

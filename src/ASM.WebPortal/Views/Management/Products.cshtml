@@ -1,0 +1,44 @@
+@model ProductsPageViewModel
+@{
+    ViewData["Title"] = "Products";
+}
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="panel-card p-4">
+            <form asp-action="CreateProduct" method="post" class="form-grid">
+                <input asp-for="Sku" class="form-control" placeholder="SKU" />
+                <input asp-for="Name" class="form-control" placeholder="Name" />
+                <textarea asp-for="Description" class="form-control" placeholder="Description"></textarea>
+                <button class="btn btn-dark">Save Product</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="panel-card p-4">
+            <table class="table align-middle">
+                <thead><tr><th>Product</th><th>Description</th><th>QR Preview</th></tr></thead>
+                <tbody>
+                @foreach (var item in Model.Products)
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@item.Name</div>
+                            <div class="small text-muted">@item.Sku</div>
+                        </td>
+                        <td>@item.Description</td>
+                        <td>
+                            @if (Model.QrCodes.TryGetValue(item.Id, out var qr))
+                            {
+                                <div class="qr-preview-card qr-preview-card-row">
+                                    <img class="qr-preview-image qr-preview-image-compact" src="@Url.Action("DownloadQr", "Management", new { qrId = qr.Id })" alt="QR for product @item.Sku" loading="lazy" />
+                                    <a class="btn btn-sm btn-outline-dark w-100" asp-action="DownloadQr" asp-controller="Management" asp-route-qrId="@qr.Id">Download QR</a>
+                                </div>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

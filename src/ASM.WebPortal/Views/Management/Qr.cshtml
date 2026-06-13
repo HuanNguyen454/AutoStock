@@ -1,0 +1,34 @@
+@model QrPageViewModel
+@{
+    ViewData["Title"] = "QR Generator";
+}
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="panel-card p-4">
+            <form asp-action="GenerateQr" method="post" class="form-grid">
+                <select asp-for="TargetType" class="form-select" asp-items="Html.GetEnumSelectList<ASM.Domain.Enums.QrTargetType>()"></select>
+                <input asp-for="TargetId" class="form-control" placeholder="Target Id (GUID)" />
+                <input asp-for="Label" class="form-control" placeholder="Label" />
+                <button class="btn btn-dark">Generate</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="panel-card p-4">
+            @if (Model.GeneratedQr is null)
+            {
+                <p class="text-muted mb-0">Tạo QR để lấy payload và file PNG.</p>
+            }
+            else
+            {
+                <dl class="row mb-4">
+                    <dt class="col-sm-3">Payload</dt>
+                    <dd class="col-sm-9"><code>@Model.GeneratedQr.Payload</code></dd>
+                    <dt class="col-sm-3">Label</dt>
+                    <dd class="col-sm-9">@Model.GeneratedQr.Label</dd>
+                </dl>
+                <a class="btn btn-outline-dark" asp-action="DownloadQr" asp-route-qrId="@Model.GeneratedQr.Id">Download PNG</a>
+            }
+        </div>
+    </div>
+</div>

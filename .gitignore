@@ -1,0 +1,45 @@
+# Build
+bin/
+obj/
+out/
+publish/
+artifacts/
+.tmpbuild/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Test
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# NuGet
+packages/
+*.nupkg
+
+# Logs
+*.log
+logs/
+
+# Database artifacts
+sql/
+src/ASM.Infrastructure/Persistence/Migrations/
+
+# Local configuration
+appsettings.*.local.json
+docker-compose.override.yml
+.env
+*.publishSettings
+*.pubxml
+
+# OS
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,38 @@
+@model LoginViewModel
+@{
+    Layout = null;
+    ViewData["Title"] = "ASM Login";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="portal-shell d-flex align-items-center justify-content-center">
+    <div class="panel-card p-4 p-md-5" style="width:min(460px, 92vw);">
+        <p class="text-uppercase text-muted small mb-2">ASM Unified Access</p>
+        <h1 class="h3 mb-3">Sign in to ASM</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger">@Model.ErrorMessage</div>
+        }
+        <form asp-action="Login" method="post" class="form-grid">
+            <input asp-for="ReturnUrl" type="hidden" />
+            <div>
+                <label asp-for="UserName" class="form-label"></label>
+                <input asp-for="UserName" class="form-control" />
+            </div>
+            <div>
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-control" />
+            </div>
+            <button class="btn btn-dark">Sign in</button>
+        </form>
+    </div>
+    <partial name="_ValidationScriptsPartial" />
+</body>
+</html>

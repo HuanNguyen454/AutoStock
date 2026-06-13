@@ -1,0 +1,264 @@
+@using System.Linq
+@model LayoutPageViewModel
+@{
+    ViewData["Title"] = "Layout";
+    var areaCount = Model.Layout?.Areas.Count ?? 0;
+    var rackCount = Model.Layout?.Areas.SelectMany(x => x.Racks).Count() ?? 0;
+    var slotCount = Model.Layout?.Areas.SelectMany(x => x.Racks).SelectMany(x => x.Slots).Count() ?? 0;
+}
+
+<div class="panel-card p-4 mb-4">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-7">
+            <label class="form-label">Warehouse</label>
+            <select name="warehouseId" class="form-select">
+                @foreach (var warehouse in Model.Warehouses)
+                {
+                    <option value="@warehouse.Id" selected="@(warehouse.Id == Model.SelectedWarehouseId)">@warehouse.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-dark w-100">Load Layout</button>
+        </div>
+    </form>
+</div>
+
+@if (Model.Layout is not null)
+{
+    <section class="layout-summary-grid mb-4">
+        <article class="layout-summary-card">
+            <div class="layout-summary-label">Warehouse</div>
+            <div class="layout-summary-value">@Model.Layout.Warehouse.Name</div>
+            <div class="layout-summary-note">@Model.Layout.Warehouse.Code</div>
+        </article>
+        <article class="layout-summary-card">
+            <div class="layout-summary-label">Areas</div>
+            <div class="layout-summary-value">@areaCount</div>
+            <div class="layout-summary-note">Functional zones</div>
+        </article>
+        <article class="layout-summary-card">
+            <div class="layout-summary-label">Racks</div>
+            <div class="layout-summary-value">@rackCount</div>
+            <div class="layout-summary-note">Storage structures</div>
+        </article>
+        <article class="layout-summary-card">
+            <div class="layout-summary-label">Slots</div>
+            <div class="layout-summary-value">@slotCount</div>
+            <div class="layout-summary-note">Scan locations</div>
+        </article>
+    </section>
+}
+
+<div class="row g-4 align-items-start">
+    <div class="col-xl-4">
+        <div class="panel-card p-4 layout-toolbox">
+            <div class="mb-4">
+                <div class="text-uppercase small text-muted">Management Actions</div>
+                <h2 class="h4 mb-1">Build Warehouse Structure</h2>
+                <p class="text-muted mb-0">Create the hierarchy from top to bottom so the demo reads naturally.</p>
+            </div>
+
+            <div class="layout-form-stack">
+                <section class="layout-form-card">
+                    <div class="layout-form-title">1. Add Area</div>
+                    <form asp-action="AddArea" method="post" class="form-grid">
+                        <input type="hidden" asp-for="SelectedWarehouseId" />
+                        <input asp-for="AreaName" class="form-control" placeholder="Area name" />
+                        <button class="btn btn-dark">Add Area</button>
+                    </form>
+                </section>
+
+                <section class="layout-form-card">
+                    <div class="layout-form-title">2. Add Rack</div>
+                    <form asp-action="AddRack" method="post" class="form-grid">
+                        <input type="hidden" asp-for="SelectedWarehouseId" />
+                        <select asp-for="AreaId" class="form-select">
+                            @foreach (var area in Model.Layout?.Areas ?? [])
+                            {
+                                <option value="@area.Id">@area.Name</option>
+                            }
+                        </select>
+                        <input asp-for="RackName" class="form-control" placeholder="Rack name" />
+                        <button class="btn btn-dark">Add Rack</button>
+                    </form>
+                </section>
+
+                <section class="layout-form-card">
+                    <div class="layout-form-title">3. Add Slot</div>
+                    <form asp-action="AddSlot" method="post" class="form-grid">
+                        <input type="hidden" asp-for="SelectedWarehouseId" />
+                        <select asp-for="RackId" class="form-select">
+                            @foreach (var rack in Model.Layout?.Areas.SelectMany(x => x.Racks) ?? [])
+                            {
+                                <option value="@rack.Id">@rack.Name</option>
+                            }
+                        </select>
+                        <input asp-for="SlotName" class="form-control" placeholder="Slot name" />
+                        <button class="btn btn-dark">Add Slot</button>
+                    </form>
+                </section>
+
+                <section class="layout-form-card">
+                    <div class="layout-form-title">4. Add Pallet</div>
+                    <form asp-action="AddPallet" method="post" class="form-grid">
+                        <input type="hidden" asp-for="SelectedWarehouseId" />
+                        <input asp-for="PalletCode" class="form-control" placeholder="Pallet code" />
+                        <button class="btn btn-dark">Add Pallet</button>
+                    </form>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-8">
+        <div class="panel-card p-4">
+            @if (Model.Layout is null)
+            {
+                <div class="layout-empty-state">
+                    <h2 class="h5 mb-2">No layout is available for this warehouse yet.</h2>
+                    <p class="text-muted mb-0">Create an area first, then continue with racks and slots.</p>
+                </div>
+            }
+            else
+            {
+                <div class="mb-4">
+                    <div class="text-uppercase small text-muted">Warehouse Map</div>
+                    <h2 class="h4 mb-1">Area -> Rack -> Slot</h2>
+                    <p class="text-muted mb-0">The structure below is organized for quick presentation and scan walkthrough.</p>
+                </div>
+
+                <div class="layout-area-stack">
+                    @foreach (var area in Model.Layout.Areas)
+                    {
+                        var areaRackCount = area.Racks.Count;
+                        var areaSlotCount = area.Racks.SelectMany(x => x.Slots).Count();
+
+                        <section class="layout-area-card">
+                            <div class="layout-area-header">
+                                <div>
+                                    <div class="layout-area-eyebrow">Area</div>
+                                    <h3 class="layout-area-title">@area.Name</h3>
+                                    <div class="layout-area-meta">
+                                        <span>@areaRackCount racks</span>
+                                        <span>@areaSlotCount slots</span>
+                                    </div>
+                                </div>
+                                <div class="layout-area-actions">
+                                    @if (Model.QrCodes.TryGetValue(area.Id, out var areaQr))
+                                    {
+                                        <a class="btn btn-sm btn-outline-dark" asp-action="DownloadQr" asp-controller="Management" asp-route-qrId="@areaQr.Id">Area QR</a>
+                                    }
+                                </div>
+                            </div>
+
+                            @if (area.Racks.Any())
+                            {
+                                <div class="layout-rack-stack">
+                                    @foreach (var rack in area.Racks)
+                                    {
+                                        <article class="layout-rack-card">
+                                            <div class="layout-rack-card-header">
+                                                <div>
+                                                    <div class="layout-rack-label">Rack</div>
+                                                    <div class="layout-rack-name">@rack.Name</div>
+                                                    <div class="layout-rack-subtitle">@rack.Slots.Count slots in this rack</div>
+                                                </div>
+                                                @if (Model.QrCodes.TryGetValue(rack.Id, out var rackQr))
+                                                {
+                                                    <div class="layout-rack-qr">
+                                                        <img class="qr-preview-image qr-preview-image-tiny" src="@Url.Action("DownloadQr", "Management", new { qrId = rackQr.Id })" alt="QR for rack @rack.Name" loading="lazy" />
+                                                        <a class="btn btn-sm btn-outline-dark" asp-action="DownloadQr" asp-controller="Management" asp-route-qrId="@rackQr.Id">Rack QR</a>
+                                                    </div>
+                                                }
+                                            </div>
+
+                                            @if (rack.Slots.Any())
+                                            {
+                                                <div class="slot-preview-grid">
+                                                    @foreach (var slot in rack.Slots)
+                                                    {
+                                                        <div class="slot-preview-card slot-preview-card-clean">
+                                                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                                                <div>
+                                                                    <div class="slot-name">@slot.Name</div>
+                                                                    <div class="small text-muted">Slot location</div>
+                                                                </div>
+                                                                <span class="badge rounded-pill text-bg-@(slot.IsOccupied ? "danger" : "success")">@(slot.IsOccupied ? "Occupied" : "Available")</span>
+                                                            </div>
+                                                            @if (Model.QrCodes.TryGetValue(slot.Id, out var slotQr))
+                                                            {
+                                                                <div class="slot-qr-row">
+                                                                    <img class="qr-preview-image qr-preview-image-micro" src="@Url.Action("DownloadQr", "Management", new { qrId = slotQr.Id })" alt="QR for slot @slot.Name" loading="lazy" />
+                                                                    <a class="btn btn-sm btn-outline-dark" asp-action="DownloadQr" asp-controller="Management" asp-route-qrId="@slotQr.Id">Slot QR</a>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="layout-inline-empty">No slots in this rack yet.</div>
+                                            }
+
+                                            <form asp-action="AddSlot" method="post" class="row g-2 mt-3">
+                                                <input type="hidden" asp-for="SelectedWarehouseId" />
+                                                <input type="hidden" name="RackId" value="@rack.Id" />
+                                                <div class="col-md-8">
+                                                    <input name="SlotName" class="form-control" placeholder="Add slot into @rack.Name" />
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <button class="btn btn-dark w-100">Add Slot</button>
+                                                </div>
+                                            </form>
+                                        </article>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="layout-inline-empty">No racks in this area yet.</div>
+                            }
+                        </section>
+                    }
+                </div>
+
+                <div class="border-top pt-4 mt-4">
+                    <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+                        <div>
+                            <div class="text-uppercase small text-muted">Pallet Zone</div>
+                            <h2 class="h5 mb-0">Pallets In This Warehouse</h2>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead><tr><th>Pallet</th><th>Status</th><th>QR Preview</th></tr></thead>
+                            <tbody>
+                            @foreach (var pallet in Model.Pallets)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">@pallet.Code</div>
+                                        <div class="small text-muted">Warehouse pallet label</div>
+                                    </td>
+                                    <td>@pallet.Status</td>
+                                    <td>
+                                        @if (Model.QrCodes.TryGetValue(pallet.Id, out var palletQr))
+                                        {
+                                            <div class="qr-preview-card qr-preview-card-row">
+                                                <img class="qr-preview-image qr-preview-image-compact" src="@Url.Action("DownloadQr", "Management", new { qrId = palletQr.Id })" alt="QR for pallet @pallet.Code" loading="lazy" />
+                                                <a class="btn btn-sm btn-outline-dark w-100" asp-action="DownloadQr" asp-controller="Management" asp-route-qrId="@palletQr.Id">Download Pallet QR</a>
+                                            </div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

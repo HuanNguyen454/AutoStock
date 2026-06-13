@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - ASM Portal</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/ASM.WebPortal.styles.css" asp-append-version="true" />
+</head>
+@{
+    var isStaffArea = string.Equals(ViewContext.RouteData.Values["area"]?.ToString(), "Staff", StringComparison.OrdinalIgnoreCase);
+    var bodyClass = isStaffArea ? "staff-shell" : "portal-shell";
+}
+<body class="@bodyClass">
+    <header class="border-bottom bg-white shadow-sm">
+        <nav class="navbar navbar-expand-lg navbar-light container py-3">
+            @if (User.IsInRole("Staff"))
+            {
+                <a class="navbar-brand fw-bold" asp-area="Staff" asp-controller="Tasks" asp-action="Index">ASM Staff</a>
+            }
+            else
+            {
+                <a class="navbar-brand fw-bold"
+                   asp-area=""
+                   asp-controller="@(User.IsInRole("Admin") ? "Admin" : "Dashboard")"
+                   asp-action="Index">ASM Portal</a>
+            }
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#portalNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="portalNav">
+                <ul class="navbar-nav me-auto gap-lg-2">
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <li class="nav-item"><a class="nav-link" asp-controller="Admin" asp-action="Index">Admin Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Admin" asp-action="Owners">Owners</a></li>
+                    }
+                    else if (User.IsInRole("Staff"))
+                    {
+                        <li class="nav-item"><a class="nav-link" asp-area="Staff" asp-controller="Tasks" asp-action="Index">My Tasks</a></li>
+                    }
+                    else
+                    {
+                        <li class="nav-item"><a class="nav-link" asp-controller="Dashboard" asp-action="Index">Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Management" asp-action="Warehouses">Warehouses</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Management" asp-action="Layout">Layout</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Management" asp-action="Products">Products</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Management" asp-action="Pallets">Pallets</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Management" asp-action="Users">Users</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Management" asp-action="Qr">QR</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Orders" asp-action="Inbound">Inbound</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Orders" asp-action="Outbound">Outbound</a></li>
+                    }
+                </ul>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <form asp-area="" asp-controller="Account" asp-action="Logout" method="post" class="d-flex align-items-center gap-3">
+                        @Html.AntiForgeryToken()
+                        <span class="small text-muted">@User.FindFirst("full_name")?.Value</span>
+                        <button type="submit" class="btn btn-outline-dark btn-sm">Logout</button>
+                    </form>
+                }
+            </div>
+        </nav>
+    </header>
+    <main class="container py-4 pb-5">
+        @RenderBody()
+    </main>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

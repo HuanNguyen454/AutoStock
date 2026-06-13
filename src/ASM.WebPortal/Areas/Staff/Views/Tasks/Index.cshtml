@@ -1,0 +1,112 @@
+@using System.Linq
+@model TaskListPageViewModel
+@{
+    ViewData["Title"] = "My Tasks";
+    var pendingCount = Model.AllTasks.Count(task => task.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase));
+    var verifiedCount = Model.AllTasks.Count(task => task.Status.Equals("Verified", StringComparison.OrdinalIgnoreCase));
+    var completedCount = Model.AllTasks.Count(task => task.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase));
+}
+
+<section class="staff-card p-4 mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <div class="text-uppercase small text-muted">Shift Board</div>
+            <h1 class="h4 mb-1">Assigned warehouse tasks</h1>
+            <p class="text-muted mb-0">The board refreshes automatically while this page stays open.</p>
+        </div>
+        <a asp-action="Index" asp-route-status="@Model.CurrentFilter" class="btn btn-outline-dark">Refresh now</a>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-6 col-md-3">
+            <div class="mini-metric">
+                <div class="small text-white-50">Pending</div>
+                <div class="display-6">@pendingCount</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="mini-metric metric-sand">
+                <div class="small text-white-50">Verified</div>
+                <div class="display-6">@verifiedCount</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="mini-metric metric-green">
+                <div class="small text-white-50">Completed</div>
+                <div class="display-6">@completedCount</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="mini-metric metric-slate">
+                <div class="small text-white-50">Alerts</div>
+                <div class="display-6">@Model.Summary.Alerts.Count</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="staff-card p-3 p-md-4 mb-4">
+    <div class="task-filter-bar">
+        <a class="task-filter-chip @(Model.CurrentFilter == "all" ? "active" : null)" asp-action="Index" asp-route-status="all">All (@Model.AllTasks.Count)</a>
+        <a class="task-filter-chip @(Model.CurrentFilter == "pending" ? "active" : null)" asp-action="Index" asp-route-status="pending">Pending (@pendingCount)</a>
+        <a class="task-filter-chip @(Model.CurrentFilter == "verified" ? "active" : null)" asp-action="Index" asp-route-status="verified">Verified (@verifiedCount)</a>
+        <a class="task-filter-chip @(Model.CurrentFilter == "completed" ? "active" : null)" asp-action="Index" asp-route-status="completed">Completed (@completedCount)</a>
+    </div>
+</section>
+
+<section class="d-grid gap-3">
+    @if (Model.Tasks.Any())
+    {
+        @foreach (var task in Model.Tasks.OrderByDescending(task => task.CreatedAtUtc))
+        {
+            <a class="staff-card p-4 text-decoration-none text-dark task-card-link" asp-action="Details" asp-route-id="@task.Id">
+                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                    <div>
+                        <div class="text-uppercase small text-muted">@task.TaskType</div>
+                        <h2 class="h5 mb-1">@task.Title</h2>
+                        <p class="mb-0 text-muted">@task.Instruction</p>
+                    </div>
+                    <span class="badge rounded-pill text-bg-@(task.Status == "Completed" ? "success" : task.Status == "Verified" ? "warning" : "secondary")">@task.Status</span>
+                </div>
+                <div class="task-meta-grid">
+                    <div>
+                        <div class="small text-muted">Reference</div>
+                        <div class="fw-semibold">@task.ReferenceCode</div>
+                    </div>
+                    <div>
+                        <div class="small text-muted">Target</div>
+                        <div class="fw-semibold">@task.ExpectedTargetType</div>
+                    </div>
+                    <div>
+                        <div class="small text-muted">Created</div>
+                        <div class="fw-semibold">@task.CreatedAtUtc.ToLocalTime().ToString("dd/MM HH:mm")</div>
+                    </div>
+                </div>
+            </a>
+        }
+    }
+    else
+    {
+        <section class="staff-card p-4 text-center">
+            <h2 class="h5 mb-2">No tasks in this group</h2>
+            <p class="text-muted mb-0">Change the filter or wait for the next automatic refresh.</p>
+        </section>
+    }
+</section>
+
+@section Scripts {
+    <script>
+        (() => {
+            const refreshUrl = "@Url.Action("Index", new { status = Model.CurrentFilter })";
+            const refreshWhenVisible = () => {
+                if (document.visibilityState === "visible") {
+                    window.location.replace(refreshUrl);
+                }
+            };
+
+            window.setInterval(refreshWhenVisible, 20000);
+            window.addEventListener("focus", refreshWhenVisible);
+            document.addEventListener("visibilitychange", refreshWhenVisible);
+        })();
+    </script>
+}

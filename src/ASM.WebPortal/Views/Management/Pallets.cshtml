@@ -1,0 +1,50 @@
+@model PalletsPageViewModel
+@{
+    ViewData["Title"] = "Pallets";
+}
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="panel-card p-4">
+            <form asp-action="CreatePallet" method="post" class="form-grid">
+                <select asp-for="WarehouseId" class="form-select">
+                    @foreach (var warehouse in Model.Warehouses)
+                    {
+                        <option value="@warehouse.Id">@warehouse.Name</option>
+                    }
+                </select>
+                <input asp-for="Code" class="form-control" placeholder="Pallet code" />
+                <button class="btn btn-dark">Save Pallet</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="panel-card p-4">
+            <table class="table align-middle">
+                <thead><tr><th>Pallet</th><th>Status</th><th>Slot</th><th>Inventory</th><th>QR Preview</th></tr></thead>
+                <tbody>
+                @foreach (var pallet in Model.Pallets)
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@pallet.Code</div>
+                            <div class="small text-muted">Ready for scan demo</div>
+                        </td>
+                        <td>@pallet.Status</td>
+                        <td>@(pallet.CurrentSlotId?.ToString() ?? "-")</td>
+                        <td>@string.Join(", ", pallet.InventoryItems.Select(x => $"{x.ProductName}: {x.Quantity}"))</td>
+                        <td>
+                            @if (Model.QrCodes.TryGetValue(pallet.Id, out var qr))
+                            {
+                                <div class="qr-preview-card qr-preview-card-row">
+                                    <img class="qr-preview-image qr-preview-image-compact" src="@Url.Action("DownloadQr", "Management", new { qrId = qr.Id })" alt="QR for pallet @pallet.Code" loading="lazy" />
+                                    <a class="btn btn-sm btn-outline-dark w-100" asp-action="DownloadQr" asp-controller="Management" asp-route-qrId="@qr.Id">Download QR</a>
+                                </div>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

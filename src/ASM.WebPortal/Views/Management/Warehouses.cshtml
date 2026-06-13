@@ -1,0 +1,40 @@
+@model WarehousesPageViewModel
+@{
+    ViewData["Title"] = "Warehouses";
+}
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="panel-card p-4">
+            <h1 class="h4">Create Warehouse</h1>
+            <form asp-action="CreateWarehouse" method="post" class="form-grid">
+                <input asp-for="Name" class="form-control" placeholder="Name" />
+                <input asp-for="Code" class="form-control" placeholder="Code" />
+                <input asp-for="Address" class="form-control" placeholder="Address" />
+                <button class="btn btn-dark">Save Warehouse</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="panel-card p-4">
+            <table class="table">
+                <thead><tr><th>Name</th><th>Code</th><th>Address</th><th>QR</th></tr></thead>
+                <tbody>
+                @foreach (var item in Model.Warehouses)
+                {
+                    <tr>
+                        <td>@item.Name</td>
+                        <td>@item.Code</td>
+                        <td>@item.Address</td>
+                        <td>
+                            @if (Model.QrCodes.TryGetValue(item.Id, out var qr))
+                            {
+                                <a class="btn btn-sm btn-outline-dark" asp-action="DownloadQr" asp-controller="Management" asp-route-qrId="@qr.Id">Download QR</a>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

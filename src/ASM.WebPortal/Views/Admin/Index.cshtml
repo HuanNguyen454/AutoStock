@@ -1,0 +1,119 @@
+@using System.Linq
+@model AdminDashboardPageViewModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<section class="hero-card p-4 p-md-5 mb-4">
+    <div class="dashboard-hero-grid">
+        <div>
+            <div class="text-uppercase small text-muted">ASM Platform</div>
+            <h1 class="display-6 fw-bold mb-2">System administration dashboard</h1>
+            <p class="text-muted mb-0">Track owner activity, usage frequency, and tenant-level operational signals across the ASM platform.</p>
+        </div>
+        <div class="dashboard-hero-actions">
+            <a class="btn btn-dark" asp-controller="Admin" asp-action="Owners">Open Owner Tracking</a>
+        </div>
+    </div>
+</section>
+
+<section class="dashboard-metric-grid mb-4">
+    <article class="metric-card metric-card-slate">
+        <div class="dashboard-metric-label">Tenants</div>
+        <div class="dashboard-metric-value">@Model.Summary.TotalTenants</div>
+        <div class="dashboard-metric-note">Organizations using the platform</div>
+    </article>
+    <article class="metric-card metric-card-navy">
+        <div class="dashboard-metric-label">Owners</div>
+        <div class="dashboard-metric-value">@Model.Summary.TotalOwners</div>
+        <div class="dashboard-metric-note">Registered warehouse owners</div>
+    </article>
+    <article class="metric-card metric-card-green">
+        <div class="dashboard-metric-label">Active Owners 7d</div>
+        <div class="dashboard-metric-value">@Model.Summary.ActiveOwnersLast7Days</div>
+        <div class="dashboard-metric-note">Owners with recent activity</div>
+    </article>
+    <article class="metric-card metric-card-gold">
+        <div class="dashboard-metric-label">Audit Events 7d</div>
+        <div class="dashboard-metric-value">@Model.Summary.TotalAuditEventsLast7Days</div>
+        <div class="dashboard-metric-note">Operational actions across tenants</div>
+    </article>
+    <article class="metric-card metric-card-rust">
+        <div class="dashboard-metric-label">Orders 7d</div>
+        <div class="dashboard-metric-value">@Model.Summary.TotalOrdersLast7Days</div>
+        <div class="dashboard-metric-note">Inbound and outbound created recently</div>
+    </article>
+    <article class="metric-card metric-card-sand">
+        <div class="dashboard-metric-label">Scans 7d</div>
+        <div class="dashboard-metric-value">@Model.Summary.TotalScansLast7Days</div>
+        <div class="dashboard-metric-note">Warehouse scan traffic this week</div>
+    </article>
+</section>
+
+<div class="row g-4">
+    <div class="col-xl-7">
+        <section class="panel-card p-4 h-100">
+            <div class="dashboard-section-head">
+                <div>
+                    <div class="dashboard-section-title">Most Active Owners</div>
+                    <div class="dashboard-section-subtitle">Quick view of the owners with the freshest activity on the platform.</div>
+                </div>
+                <a class="btn btn-outline-dark btn-sm" asp-controller="Admin" asp-action="Owners">View all</a>
+            </div>
+
+            <div class="owner-admin-stack">
+                @foreach (var owner in Model.Owners)
+                {
+                    <a class="owner-admin-card text-decoration-none text-dark" asp-controller="Admin" asp-action="Owner" asp-route-id="@owner.OwnerUserId">
+                        <div class="owner-admin-top">
+                            <div>
+                                <div class="small text-muted">@owner.TenantName</div>
+                                <div class="fw-bold">@owner.OwnerFullName</div>
+                            </div>
+                            <span class="dashboard-status-pill @(owner.IsActive ? "completed" : "")">@(owner.IsActive ? "Active" : "Disabled")</span>
+                        </div>
+                        <div class="owner-admin-grid">
+                            <div>
+                                <div class="order-meta-label">Actions 7d</div>
+                                <div class="order-meta-value">@owner.OwnerActionsLast7Days</div>
+                            </div>
+                            <div>
+                                <div class="order-meta-label">Orders 7d</div>
+                                <div class="order-meta-value">@owner.TenantOrdersLast7Days</div>
+                            </div>
+                            <div>
+                                <div class="order-meta-label">Scans 7d</div>
+                                <div class="order-meta-value">@owner.TenantScansLast7Days</div>
+                            </div>
+                            <div>
+                                <div class="order-meta-label">Last Activity</div>
+                                <div class="order-meta-value">@(owner.LastActivityAtUtc?.ToLocalTime().ToString("dd/MM HH:mm") ?? "No activity")</div>
+                            </div>
+                        </div>
+                    </a>
+                }
+            </div>
+        </section>
+    </div>
+
+    <div class="col-xl-5">
+        <section class="panel-card p-4 h-100">
+            <div class="dashboard-section-head">
+                <div>
+                    <div class="dashboard-section-title">Recent Alerts</div>
+                    <div class="dashboard-section-subtitle">Cross-tenant platform issues detected from recent scan errors.</div>
+                </div>
+            </div>
+
+            <div class="dashboard-alert-list">
+                @foreach (var alert in Model.Summary.Alerts)
+                {
+                    <article class="dashboard-alert-card">
+                        <div class="dashboard-alert-title">@alert.Title</div>
+                        <div class="dashboard-alert-detail">@alert.Detail</div>
+                    </article>
+                }
+            </div>
+        </section>
+    </div>
+</div>

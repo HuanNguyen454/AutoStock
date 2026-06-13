@@ -1,0 +1,203 @@
+@using System.Linq
+@model InboundPageViewModel
+@{
+    ViewData["Title"] = "Inbound Orders";
+}
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="panel-card p-4">
+            <div class="mb-3">
+                <div class="text-uppercase small text-muted">Inbound Setup</div>
+                <h1 class="h4 mb-1">Create inbound with full warehouse path</h1>
+                <p class="text-muted mb-0">Each slot and pallet is shown under its warehouse, area, and rack so the assignment is never ambiguous.</p>
+            </div>
+
+            <form asp-action="CreateInbound" method="post" class="form-grid hierarchy-form" data-hierarchy-form>
+                <div>
+                    <label asp-for="WarehouseId" class="form-label">Warehouse</label>
+                    <select asp-for="WarehouseId" class="form-select" data-warehouse-select>
+                        @foreach (var item in Model.Warehouses)
+                        {
+                            <option value="@item.Id">@item.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label asp-for="ProductId" class="form-label">Product</label>
+                    <select asp-for="ProductId" class="form-select">
+                        @foreach (var item in Model.Products)
+                        {
+                            <option value="@item.Id">@item.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label asp-for="PalletId" class="form-label">Pallet</label>
+                    <select asp-for="PalletId" class="form-select" data-hierarchy-options="pallet">
+                        @foreach (var group in Model.PalletOptions.GroupBy(x => new { x.WarehouseId, WarehouseName = x.Path.Split(" > ")[0] }))
+                        {
+                            <optgroup label="@group.Key.WarehouseName">
+                                @foreach (var item in group)
+                                {
+                                    <option value="@item.Id" data-warehouse-id="@item.WarehouseId" data-path="@item.Path" data-note="@item.Note">
+                                        @item.Label
+                                    </option>
+                                }
+                            </optgroup>
+                        }
+                    </select>
+                    <div class="hierarchy-hint" data-hierarchy-hint="pallet"></div>
+                </div>
+
+                <div>
+                    <label asp-for="TargetSlotId" class="form-label">Target Slot</label>
+                    <select asp-for="TargetSlotId" class="form-select" data-hierarchy-options="slot">
+                        @foreach (var group in Model.SlotOptions.GroupBy(x => new { x.WarehouseId, WarehouseName = x.Path.Split(" > ")[0] }))
+                        {
+                            <optgroup label="@group.Key.WarehouseName">
+                                @foreach (var item in group)
+                                {
+                                    <option value="@item.Id" data-warehouse-id="@item.WarehouseId" data-path="@item.Path" data-note="@item.Note">
+                                        @item.Label
+                                    </option>
+                                }
+                            </optgroup>
+                        }
+                    </select>
+                    <div class="hierarchy-hint" data-hierarchy-hint="slot"></div>
+                </div>
+
+                <div>
+                    <label asp-for="AssignedToUserId" class="form-label">Assigned Staff</label>
+                    <select asp-for="AssignedToUserId" class="form-select">
+                        @foreach (var item in Model.Users)
+                        {
+                            <option value="@item.Id">@item.FullName</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label asp-for="Quantity" class="form-label">Quantity</label>
+                    <input asp-for="Quantity" class="form-control" placeholder="Quantity" />
+                </div>
+
+                <div>
+                    <label asp-for="ReferenceCode" class="form-label">Reference Code</label>
+                    <input asp-for="ReferenceCode" class="form-control" placeholder="Reference code" />
+                </div>
+
+                <button class="btn btn-dark">Create Inbound</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="panel-card p-4">
+            <div class="mb-3">
+                <div class="text-uppercase small text-muted">Assigned Orders</div>
+                <h2 class="h5 mb-1">Inbound queue with warehouse path</h2>
+                <p class="text-muted mb-0">The line summary now shows the exact warehouse, area, rack, and slot for each inbound destination.</p>
+            </div>
+
+            <div class="order-stack">
+                @foreach (var item in Model.Orders)
+                {
+                    var line = item.Lines.FirstOrDefault();
+                    <article class="order-card-clean">
+                        <div class="order-card-head">
+                            <div>
+                                <div class="small text-muted">Inbound</div>
+                                <div class="fw-bold">@item.ReferenceCode</div>
+                            </div>
+                            <span class="dashboard-status-pill @item.Status.ToLowerInvariant()">@item.Status</span>
+                        </div>
+                        <div class="order-meta-grid-clean">
+                            <div>
+                                <div class="order-meta-label">Warehouse</div>
+                                <div class="order-meta-value">@item.WarehouseName</div>
+                            </div>
+                            <div>
+                                <div class="order-meta-label">Staff</div>
+                                <div class="order-meta-value">@item.AssignedToUserName</div>
+                            </div>
+                            <div>
+                                <div class="order-meta-label">Product</div>
+                                <div class="order-meta-value">@line?.ProductName x @line?.Quantity</div>
+                            </div>
+                            <div>
+                                <div class="order-meta-label">Pallet</div>
+                                <div class="order-meta-value">@line?.PalletCode</div>
+                            </div>
+                        </div>
+                        <div class="order-path-block">
+                            <div class="order-meta-label">Target Path</div>
+                            <div class="order-path-value">@line?.TargetSlotPath</div>
+                        </div>
+                    </article>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const form = document.querySelector("[data-hierarchy-form]");
+            if (!form) return;
+
+            const warehouseSelect = form.querySelector("[data-warehouse-select]");
+            const palletSelect = form.querySelector("[data-hierarchy-options='pallet']");
+            const slotSelect = form.querySelector("[data-hierarchy-options='slot']");
+            const palletHint = form.querySelector("[data-hierarchy-hint='pallet']");
+            const slotHint = form.querySelector("[data-hierarchy-hint='slot']");
+
+            function updateHint(select, hint) {
+                const option = select.options[select.selectedIndex];
+                if (!option) {
+                    hint.textContent = "";
+                    return;
+                }
+
+                const path = option.dataset.path || "";
+                const note = option.dataset.note || "";
+                hint.textContent = note ? `${path} | ${note}` : path;
+            }
+
+            function filterSelect(select, hint) {
+                const warehouseId = warehouseSelect.value;
+                let firstVisible = null;
+
+                Array.from(select.options).forEach(option => {
+                    const matches = option.dataset.warehouseId === warehouseId;
+                    option.hidden = !matches;
+                    option.disabled = !matches;
+                    if (matches && !firstVisible) {
+                        firstVisible = option;
+                    }
+                });
+
+                if (firstVisible && select.selectedOptions[0]?.dataset.warehouseId !== warehouseId) {
+                    select.value = firstVisible.value;
+                }
+
+                updateHint(select, hint);
+            }
+
+            warehouseSelect.addEventListener("change", () => {
+                filterSelect(palletSelect, palletHint);
+                filterSelect(slotSelect, slotHint);
+            });
+
+            palletSelect.addEventListener("change", () => updateHint(palletSelect, palletHint));
+            slotSelect.addEventListener("change", () => updateHint(slotSelect, slotHint));
+
+            filterSelect(palletSelect, palletHint);
+            filterSelect(slotSelect, slotHint);
+        })();
+    </script>
+}

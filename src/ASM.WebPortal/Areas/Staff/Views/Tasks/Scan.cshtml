@@ -1,0 +1,268 @@
+@using System.Linq
+@model TaskExecutionPageViewModel
+@{
+    ViewData["Title"] = "Task Execution";
+    var taskStatusClass = Model.Task.Status switch
+    {
+        "Completed" => "task-status-completed",
+        "Verified" => "task-status-verified",
+        "Failed" => "task-status-failed",
+        _ => "task-status-pending"
+    };
+}
+
+<section class="staff-card p-4 mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3">
+        <div>
+            <div class="text-uppercase small text-muted">@Model.Task.TaskType</div>
+            <h1 class="h4 mb-1">@Model.Task.Title</h1>
+            <p class="text-muted mb-0">@Model.Task.Instruction</p>
+        </div>
+        <div class="task-status-banner @taskStatusClass">
+            <div class="task-status-label">Task Status</div>
+            <div class="task-status-value">@Model.Task.Status</div>
+        </div>
+    </div>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(Model.FeedbackMessage))
+{
+    <div class="alert alert-@(Model.LastActionSucceeded == true ? "success" : "danger")">@Model.FeedbackMessage</div>
+}
+
+<section class="staff-card p-4 mb-4">
+    <div class="scan-top-summary">
+        <div>
+            <div class="text-uppercase small text-muted">Execution Guide</div>
+            <h2 class="h5 mb-1">Follow each step in order</h2>
+            <p class="text-muted mb-0">The next required action stays highlighted until the right QR is confirmed.</p>
+        </div>
+        <span class="scan-state-chip @(Model.CanComplete ? "active" : null)">@(Model.CanComplete ? "Ready to complete" : "In progress")</span>
+    </div>
+
+    <div class="scan-focus-grid mt-4">
+        <div class="scan-focus-item">
+            <div class="scan-focus-label">Warehouse</div>
+            <div class="scan-focus-value">@Model.WarehouseName</div>
+        </div>
+        <div class="scan-focus-item">
+            <div class="scan-focus-label">Reference</div>
+            <div class="scan-focus-value">@Model.Task.ReferenceCode</div>
+        </div>
+        <div class="scan-focus-item">
+            <div class="scan-focus-label">Status</div>
+            <div class="scan-focus-value">@Model.Task.Status</div>
+        </div>
+    </div>
+
+    @if (Model.InboundOrder?.Lines.FirstOrDefault() is { } inboundLine)
+    {
+        <div class="task-path-card mt-4">
+            <div class="scan-focus-label">Inbound Target Path</div>
+            <div class="task-path-main">@inboundLine.TargetSlotPath</div>
+            <div class="task-path-sub">Pallet @inboundLine.PalletCode | @inboundLine.ProductName x @inboundLine.Quantity</div>
+        </div>
+    }
+
+    @if (Model.OutboundOrder?.Lines.FirstOrDefault() is { } outboundLine)
+    {
+        <div class="task-path-card mt-4">
+            <div class="scan-focus-label">Outbound Source Path</div>
+            <div class="task-path-main">@outboundLine.SourceSlotPath</div>
+            <div class="task-path-sub">Pallet @outboundLine.SourcePalletCode | @outboundLine.ProductName x @outboundLine.Quantity</div>
+        </div>
+    }
+</section>
+
+<section class="staff-card p-4 mb-4">
+    <div class="steps-bar">
+        @for (var index = 0; index < Model.Steps.Count; index++)
+        {
+            var step = Model.Steps.ElementAt(index);
+            <div class="step @(step.IsCompleted ? "done" : step.IsCurrent ? "active" : string.Empty)">
+                <div class="step-circle">@(step.IsCompleted ? "OK" : step.Number)</div>
+                <span class="step-label">@step.Title</span>
+            </div>
+            @if (index < Model.Steps.Count - 1)
+            {
+                <div class="step-connector @(step.IsCompleted ? "done" : string.Empty)"></div>
+            }
+        }
+    </div>
+</section>
+
+<section class="scan-workbench">
+    @foreach (var step in Model.Steps)
+    {
+        var cardClass = step.IsCompleted ? "success" : step.IsCurrent ? "warning" : "danger";
+        <article class="staff-card p-4 mb-4 scan-step @cardClass">
+            <div class="scan-step-top">
+                <div>
+                    <div class="flow-step-title">
+                        <div class="step-num">@step.Number</div>
+                        @step.Title
+                    </div>
+                    <p class="text-muted mb-2">@step.Instruction</p>
+                </div>
+                <span class="scan-pill @(step.IsCompleted ? "pill-success" : step.IsCurrent ? "pill-warning" : "pill-danger")">
+                    @(step.IsCompleted ? "Done" : step.IsCurrent ? "Do this now" : "Waiting")
+                </span>
+            </div>
+
+            <div class="scan-focus-grid scan-focus-grid-compact">
+                <div class="scan-focus-item">
+                    <div class="scan-focus-label">@step.ExpectedLabel</div>
+                    <div class="scan-focus-value">@step.ExpectedValue</div>
+                </div>
+            </div>
+
+            @if (!step.RequiresScan)
+            {
+                <form asp-action="Start" asp-route-id="@Model.Task.Id" method="post" class="mt-3">
+                    <button class="btn btn-dark btn-lg" @(step.IsCompleted ? "disabled" : null)>@step.ActionLabel</button>
+                </form>
+            }
+            else
+            {
+                <form id="step-form-@step.Key" asp-action="Verify" asp-route-id="@Model.Task.Id" method="post" class="d-grid gap-3 mt-3">
+                    <input type="hidden" name="stepKey" value="@step.Key" />
+                    <input type="hidden" name="cameraPayload" id="cameraPayload-@step.Key" />
+                    <div class="scan-step-actions">
+                        <button
+                            type="button"
+                            class="btn btn-dark"
+                            data-scan-button
+                            data-step-title="@step.Title"
+                            data-step-instruction="@step.Instruction"
+                            data-form-id="step-form-@step.Key"
+                            data-input-id="cameraPayload-@step.Key"
+                            @(step.IsCompleted || !step.IsCurrent ? "disabled" : null)>
+                            @step.CameraLabel
+                        </button>
+                    </div>
+                    <div class="scan-manual">
+                        <label class="form-label mb-0" for="manualPayload-@step.Key">Manual QR payload</label>
+                        <input
+                            id="manualPayload-@step.Key"
+                            name="manualPayload"
+                            value="@step.ManualPayload"
+                            class="form-control"
+                            placeholder="Paste QR payload if camera is unavailable"
+                            @(step.IsCompleted || !step.IsCurrent ? "disabled" : null) />
+                        <button class="btn btn-outline-secondary" @(step.IsCompleted || !step.IsCurrent ? "disabled" : null)>@step.ActionLabel</button>
+                    </div>
+                </form>
+            }
+        </article>
+    }
+</section>
+
+<section class="staff-card p-4">
+    <div class="d-grid gap-3">
+        @if (Model.CanComplete && !Model.IsCompleted)
+        {
+            <form asp-action="Complete" asp-route-id="@Model.Task.Id" method="post">
+                <button class="btn btn-success btn-lg w-100">Complete Task</button>
+            </form>
+        }
+        <a asp-action="Details" asp-route-id="@Model.Task.Id" class="btn btn-outline-secondary">Back to Task Detail</a>
+    </div>
+</section>
+
+<div class="camera-overlay" id="cameraOverlay" aria-hidden="true">
+    <div class="camera-overlay-card">
+        <div class="camera-overlay-top">
+            <div>
+                <div class="camera-overlay-title" id="cameraOverlayTitle">Scan QR</div>
+                <div class="camera-overlay-subtitle" id="cameraOverlaySubtitle">Point the camera at the expected QR code.</div>
+            </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="cameraOverlayClose">Close</button>
+        </div>
+        <div class="camera-overlay-shell">
+            <div id="cameraOverlayReader" class="camera-overlay-reader"></div>
+            <div class="camera-overlay-tip">After a successful scan, the page will automatically submit this step.</div>
+        </div>
+        <div class="camera-overlay-actions">
+            <button type="button" class="btn btn-dark" id="cameraOverlayStart">Start camera</button>
+            <button type="button" class="btn btn-outline-secondary" id="cameraOverlayStop">Stop camera</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script>
+        (() => {
+            const overlay = document.getElementById("cameraOverlay");
+            const title = document.getElementById("cameraOverlayTitle");
+            const subtitle = document.getElementById("cameraOverlaySubtitle");
+            const startButton = document.getElementById("cameraOverlayStart");
+            const stopButton = document.getElementById("cameraOverlayStop");
+            const closeButton = document.getElementById("cameraOverlayClose");
+            const scanButtons = document.querySelectorAll("[data-scan-button]");
+            const qr = new Html5Qrcode("cameraOverlayReader");
+            let currentForm = null;
+            let currentInput = null;
+
+            function openOverlay(button) {
+                currentForm = document.getElementById(button.dataset.formId);
+                currentInput = document.getElementById(button.dataset.inputId);
+                title.textContent = button.dataset.stepTitle || "Scan QR";
+                subtitle.textContent = button.dataset.stepInstruction || "Point the camera at the expected QR code.";
+                overlay.classList.add("open");
+                overlay.setAttribute("aria-hidden", "false");
+            }
+
+            async function stopScanner() {
+                try {
+                    if (qr.isScanning) {
+                        await qr.stop();
+                    }
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+
+            async function startScanner() {
+                try {
+                    const cameras = await Html5Qrcode.getCameras();
+                    const selectedCamera = cameras.find(camera => /back|rear|environment/i.test(camera.label))
+                        ?.id || cameras[0]?.id || { facingMode: "environment" };
+
+                    await stopScanner();
+                    await qr.start(
+                        selectedCamera,
+                        { fps: 10, qrbox: { width: 240, height: 240 } },
+                        async decodedText => {
+                            if (!currentInput || !currentForm) {
+                                return;
+                            }
+
+                            currentInput.value = decodedText;
+                            await stopScanner();
+                            overlay.classList.remove("open");
+                            overlay.setAttribute("aria-hidden", "true");
+                            currentForm.submit();
+                        });
+                } catch (error) {
+                    console.error(error);
+                    alert("Cannot open camera. Please use manual payload entry for this step.");
+                }
+            }
+
+            scanButtons.forEach(button => {
+                button.addEventListener("click", () => openOverlay(button));
+            });
+
+            closeButton.addEventListener("click", async () => {
+                await stopScanner();
+                overlay.classList.remove("open");
+                overlay.setAttribute("aria-hidden", "true");
+            });
+
+            startButton.addEventListener("click", startScanner);
+            stopButton.addEventListener("click", stopScanner);
+            window.addEventListener("beforeunload", stopScanner);
+        })();
+    </script>
+}

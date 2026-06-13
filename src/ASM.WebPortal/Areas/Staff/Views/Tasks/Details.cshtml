@@ -1,0 +1,57 @@
+@model TaskDetailPageViewModel
+@{
+    ViewData["Title"] = "Task Details";
+}
+<section class="staff-card p-4 mb-4">
+    <div class="text-uppercase small text-muted">@Model.Task.TaskType</div>
+    <h1 class="h4 mb-2">@Model.Task.Title</h1>
+    <p class="text-muted">@Model.Task.Instruction</p>
+    <dl class="row mb-0">
+        <dt class="col-5">Expected Target</dt>
+        <dd class="col-7">@Model.Task.ExpectedTargetType</dd>
+        <dt class="col-5">Status</dt>
+        <dd class="col-7">@Model.Task.Status</dd>
+        <dt class="col-5">Reference</dt>
+        <dd class="col-7">@Model.Task.ReferenceCode</dd>
+    </dl>
+</section>
+
+@if (Model.InboundOrder?.Lines.FirstOrDefault() is { } inboundLine)
+{
+    <section class="staff-card p-4 mb-4">
+        <div class="text-uppercase small text-muted">Expected Path</div>
+        <h2 class="h5 mb-3">Inbound destination</h2>
+        <div class="task-path-card">
+            <div class="task-path-main">@inboundLine.TargetSlotPath</div>
+            <div class="task-path-sub">Pallet: @inboundLine.PalletCode | Product: @inboundLine.ProductName x @inboundLine.Quantity</div>
+        </div>
+    </section>
+}
+
+@if (Model.OutboundOrder?.Lines.FirstOrDefault() is { } outboundLine)
+{
+    <section class="staff-card p-4 mb-4">
+        <div class="text-uppercase small text-muted">Expected Path</div>
+        <h2 class="h5 mb-3">Outbound pick location</h2>
+        <div class="task-path-card">
+            <div class="task-path-main">@outboundLine.SourceSlotPath</div>
+            <div class="task-path-sub">Pallet: @outboundLine.SourcePalletCode | Product: @outboundLine.ProductName x @outboundLine.Quantity</div>
+        </div>
+    </section>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.FeedbackMessage))
+{
+    <div class="alert alert-@(Model.LastScanSucceeded == true ? "success" : "warning")">@Model.FeedbackMessage</div>
+}
+
+<div class="d-grid gap-3">
+    <a asp-action="Scan" asp-route-id="@Model.Task.Id" class="btn btn-dark btn-lg">Open Guided Flow</a>
+    @if (Model.Task.Status == "Verified")
+    {
+        <form asp-action="Complete" asp-route-id="@Model.Task.Id" method="post">
+            <button class="btn btn-success btn-lg w-100">Confirm Completion</button>
+        </form>
+    }
+    <a asp-action="Index" class="btn btn-outline-secondary">Back to Tasks</a>
+</div>

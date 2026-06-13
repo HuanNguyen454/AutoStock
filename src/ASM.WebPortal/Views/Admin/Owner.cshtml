@@ -1,0 +1,192 @@
+@model AdminOwnerDetailPageViewModel
+@{
+    ViewData["Title"] = "Owner Detail";
+}
+
+<section class="hero-card p-4 p-md-5 mb-4">
+    <div class="dashboard-hero-grid">
+        <div>
+            <div class="text-uppercase small text-muted">@Model.Detail.Summary.TenantName</div>
+            <h1 class="h3 mb-2">@Model.Detail.Summary.OwnerFullName</h1>
+            <p class="text-muted mb-0">@Model.Detail.Summary.OwnerEmail</p>
+        </div>
+        <div class="dashboard-hero-actions">
+            <span class="dashboard-status-pill @(Model.Detail.Summary.IsActive ? "completed" : "")">@(Model.Detail.Summary.IsActive ? "Active" : "Disabled")</span>
+            <a class="btn btn-outline-dark" asp-controller="Admin" asp-action="Owners">Back to Owners</a>
+        </div>
+    </div>
+</section>
+
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+<section class="dashboard-signal-strip mb-4">
+    <article class="dashboard-signal-card">
+        <div class="dashboard-signal-label">Actions 7d</div>
+        <div class="dashboard-signal-value">@Model.Detail.Summary.OwnerActionsLast7Days</div>
+    </article>
+    <article class="dashboard-signal-card">
+        <div class="dashboard-signal-label">Orders 7d</div>
+        <div class="dashboard-signal-value">@Model.Detail.Summary.TenantOrdersLast7Days</div>
+    </article>
+    <article class="dashboard-signal-card">
+        <div class="dashboard-signal-label">Scans 7d</div>
+        <div class="dashboard-signal-value">@Model.Detail.Summary.TenantScansLast7Days</div>
+    </article>
+</section>
+
+<div class="row g-4">
+    <div class="col-xl-5">
+        <section class="panel-card p-4 h-100">
+            <div class="dashboard-section-head">
+                <div>
+                    <div class="dashboard-section-title">Usage Summary</div>
+                    <div class="dashboard-section-subtitle">Core owner and tenant activity indicators.</div>
+                </div>
+            </div>
+
+            <div class="owner-admin-grid owner-admin-grid-detail">
+                <div>
+                    <div class="order-meta-label">Warehouses</div>
+                    <div class="order-meta-value">@Model.Detail.Summary.WarehouseCount</div>
+                </div>
+                <div>
+                    <div class="order-meta-label">Tenant Users</div>
+                    <div class="order-meta-value">@Model.Detail.Summary.TotalUsers</div>
+                </div>
+                <div>
+                    <div class="order-meta-label">Last Activity</div>
+                    <div class="order-meta-value">@(Model.Detail.Summary.LastActivityAtUtc?.ToLocalTime().ToString("dd/MM HH:mm") ?? "No activity")</div>
+                </div>
+                <div>
+                    <div class="order-meta-label">Last Login</div>
+                    <div class="order-meta-value">@(Model.Detail.Summary.LastLoginAtUtc?.ToLocalTime().ToString("dd/MM HH:mm") ?? "No login data")</div>
+                </div>
+                <div>
+                    <div class="order-meta-label">Top Action</div>
+                    <div class="order-meta-value">@Model.Detail.Summary.TopAction</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="col-xl-7">
+        <section class="panel-card p-4">
+            <div class="dashboard-section-head">
+                <div>
+                    <div class="dashboard-section-title">Edit Owner Profile</div>
+                    <div class="dashboard-section-subtitle">Update owner-facing account and tenant identity without changing the database schema.</div>
+                </div>
+            </div>
+
+            <form asp-action="UpdateOwner" method="post" class="row g-3">
+                <input asp-for="Edit.OwnerUserId" type="hidden" />
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="col-md-6">
+                    <label asp-for="Edit.OwnerFullName" class="form-label">Full Name</label>
+                    <input asp-for="Edit.OwnerFullName" class="form-control" />
+                    <span asp-validation-for="Edit.OwnerFullName" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="Edit.TenantName" class="form-label">Company / Tenant Name</label>
+                    <input asp-for="Edit.TenantName" class="form-control" />
+                    <span asp-validation-for="Edit.TenantName" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="Edit.OwnerUserName" class="form-label">Username</label>
+                    <input asp-for="Edit.OwnerUserName" class="form-control" />
+                    <span asp-validation-for="Edit.OwnerUserName" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="Edit.OwnerEmail" class="form-label">Email</label>
+                    <input asp-for="Edit.OwnerEmail" class="form-control" />
+                    <span asp-validation-for="Edit.OwnerEmail" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="Edit.OwnerPhoneNumber" class="form-label">Phone Number</label>
+                    <input asp-for="Edit.OwnerPhoneNumber" class="form-control" />
+                    <span asp-validation-for="Edit.OwnerPhoneNumber" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6 d-flex align-items-end">
+                    <div class="form-check mb-2">
+                        <input asp-for="Edit.IsActive" class="form-check-input" />
+                        <label asp-for="Edit.IsActive" class="form-check-label">Owner account is active</label>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <button class="btn btn-dark">Save Owner Changes</button>
+                </div>
+            </form>
+        </section>
+    </div>
+</div>
+
+<div class="row g-4 mt-1">
+    <div class="col-xl-12">
+        <section class="panel-card p-4 h-100">
+            <div class="dashboard-section-head">
+                <div>
+                    <div class="dashboard-section-title">Activity Frequency</div>
+                    <div class="dashboard-section-subtitle">Daily audit volume for the owner tenant over the last 7 days.</div>
+                </div>
+            </div>
+
+            <div class="owner-frequency-stack">
+                @foreach (var point in Model.Detail.DailyActivity)
+                {
+                    <div class="owner-frequency-row">
+                        <div class="owner-frequency-label">@point.Label</div>
+                        <div class="owner-frequency-bar-shell">
+                            <div class="owner-frequency-bar" style="width:@Math.Max(12, point.Count * 14)px"></div>
+                        </div>
+                        <div class="owner-frequency-count">@point.Count</div>
+                    </div>
+                }
+            </div>
+        </section>
+    </div>
+</div>
+
+<section class="panel-card p-4 mt-4">
+    <div class="dashboard-section-head">
+        <div>
+            <div class="dashboard-section-title">Recent Behavior Log</div>
+            <div class="dashboard-section-subtitle">Latest tenant actions so ASM Admin can review who did what and how often.</div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table align-middle admin-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Actor</th>
+                    <th>Action</th>
+                    <th>Entity</th>
+                    <th>Detail</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var activity in Model.Detail.RecentActivities)
+                {
+                    <tr>
+                        <td>@activity.HappenedAtUtc.ToLocalTime().ToString("dd/MM HH:mm")</td>
+                        <td>@activity.ActorName</td>
+                        <td>@activity.Action</td>
+                        <td>@activity.EntityName</td>
+                        <td>@activity.Detail</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

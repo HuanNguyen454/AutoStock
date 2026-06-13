@@ -1,0 +1,59 @@
+@model AdminOwnersPageViewModel
+@{
+    ViewData["Title"] = "Owner Tracking";
+}
+
+<section class="panel-card p-4 mb-4">
+    <div class="dashboard-section-head mb-0">
+        <div>
+            <div class="dashboard-section-title">Owner usage tracking</div>
+            <div class="dashboard-section-subtitle">Monitor owner behavior, frequency of use, and operational health by tenant.</div>
+        </div>
+    </div>
+</section>
+
+<section class="panel-card p-4">
+    <div class="table-responsive">
+        <table class="table align-middle admin-table">
+            <thead>
+                <tr>
+                    <th>Owner</th>
+                    <th>Tenant</th>
+                    <th>Warehouses</th>
+                    <th>Users</th>
+                    <th>Actions 7d</th>
+                    <th>Orders 7d</th>
+                    <th>Scans 7d</th>
+                    <th>Last Activity</th>
+                    <th>Last Login</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var owner in Model.Owners.OrderByDescending(x => x.LastActivityAtUtc))
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-bold">@owner.OwnerFullName</div>
+                            <div class="small text-muted">@owner.OwnerEmail</div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold">@owner.TenantName</div>
+                            <div class="small text-muted">@owner.TopAction</div>
+                        </td>
+                        <td>@owner.WarehouseCount</td>
+                        <td>@owner.TotalUsers</td>
+                        <td>@owner.OwnerActionsLast7Days</td>
+                        <td>@owner.TenantOrdersLast7Days</td>
+                        <td>@owner.TenantScansLast7Days</td>
+                        <td>@(owner.LastActivityAtUtc?.ToLocalTime().ToString("dd/MM HH:mm") ?? "No activity")</td>
+                        <td>@(owner.LastLoginAtUtc?.ToLocalTime().ToString("dd/MM HH:mm") ?? "No login data")</td>
+                        <td>
+                            <a class="btn btn-outline-dark btn-sm" asp-controller="Admin" asp-action="Owner" asp-route-id="@owner.OwnerUserId">View</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
