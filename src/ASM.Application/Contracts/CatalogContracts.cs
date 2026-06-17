@@ -15,3 +15,20 @@ public record PalletDto(
 public record CreatePalletRequest(Guid WarehouseId, string Code);
 
 public record InventoryItemDto(Guid Id, Guid ProductId, string ProductName, int Quantity);
+
+public record ProductLocationSearchResultDto(
+    Guid ProductId,
+    string Sku,
+    string ProductName,
+    Guid? InventoryItemId,
+    int Quantity,
+    Guid? PalletId,
+    string? PalletCode,
+    string? PalletStatus,
+    Guid? SlotId,
+    string? SlotName,
+    string? RackName,
+    string? AreaName,
+    string? WarehouseName,
+    string LocationPath,
+    string? Note);

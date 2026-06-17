@@ -20,7 +20,7 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Server=localhost,1433;Database=AsmWmsDb;User Id=sa;Password=Your_strong_password123;TrustServerCertificate=True;";
+            ?? "Server=(localdb)\\MyLocalDB;Database=AsmWmsDb;Trusted_Connection=True;TrustServerCertificate=True;";
 
         services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
 

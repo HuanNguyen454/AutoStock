@@ -157,12 +157,18 @@ public class ManagementController(
         return RedirectToAction(nameof(Layout), new { warehouseId = model.SelectedWarehouseId });
     }
 
-    public async Task<IActionResult> Products(CancellationToken cancellationToken)
+    public async Task<IActionResult> Products(string? keyword, CancellationToken cancellationToken)
     {
         var products = await catalogService.GetProductsAsync(cancellationToken);
+        var hasSearched = !string.IsNullOrWhiteSpace(keyword);
         return View(new ProductsPageViewModel
         {
             Products = products,
+            Keyword = keyword,
+            HasSearched = hasSearched,
+            LocationResults = hasSearched
+                ? await catalogService.SearchProductLocationsAsync(keyword!, cancellationToken)
+                : [],
             QrCodes = await EnsureQrsAsync(
                 products,
                 x => x.Id,

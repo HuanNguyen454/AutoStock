@@ -2,6 +2,93 @@
 @{
     ViewData["Title"] = "Products";
 }
+<section class="panel-card p-4 mb-4">
+    <div class="dashboard-section-head">
+        <div>
+            <div class="dashboard-section-title">Tìm vị trí sản phẩm</div>
+            <div class="dashboard-section-subtitle">Tra cứu theo SKU hoặc tên sản phẩm trong tenant hiện tại.</div>
+        </div>
+    </div>
+
+    <form asp-action="Products" method="get" class="row g-3 align-items-end">
+        <div class="col-lg-8">
+            <label class="form-label" for="product-location-keyword">Từ khóa</label>
+            <input
+                id="product-location-keyword"
+                name="keyword"
+                value="@Model.Keyword"
+                class="form-control"
+                placeholder="Nhập SKU hoặc tên sản phẩm" />
+        </div>
+        <div class="col-lg-4 d-flex gap-2">
+            <button class="btn btn-dark flex-fill">Tìm vị trí</button>
+            @if (Model.HasSearched)
+            {
+                <a class="btn btn-outline-secondary" asp-action="Products">Xóa</a>
+            }
+        </div>
+    </form>
+
+    @if (Model.HasSearched)
+    {
+        <div class="border-top pt-4 mt-4">
+            @if (Model.LocationResults.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Sản phẩm</th>
+                                <th>Số lượng</th>
+                                <th>Pallet</th>
+                                <th>Trạng thái</th>
+                                <th>Kho</th>
+                                <th>Area</th>
+                                <th>Rack</th>
+                                <th>Slot</th>
+                                <th>Vị trí đầy đủ</th>
+                                <th>Ghi chú</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.LocationResults)
+                            {
+                                <tr>
+                                    <td><span class="fw-semibold">@item.Sku</span></td>
+                                    <td>@item.ProductName</td>
+                                    <td>@(item.InventoryItemId.HasValue ? item.Quantity : "-")</td>
+                                    <td>@(item.PalletCode ?? "-")</td>
+                                    <td>@(item.PalletStatus ?? "-")</td>
+                                    <td>@(item.WarehouseName ?? "-")</td>
+                                    <td>@(item.AreaName ?? "-")</td>
+                                    <td>@(item.RackName ?? "-")</td>
+                                    <td>@(item.SlotName ?? "-")</td>
+                                    <td>
+                                        @if (string.IsNullOrWhiteSpace(item.LocationPath))
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@item.LocationPath</span>
+                                        }
+                                    </td>
+                                    <td>@(item.Note ?? "-")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="layout-empty-state">Không tìm thấy sản phẩm.</div>
+            }
+        </div>
+    }
+</section>
+
 <div class="row g-4">
     <div class="col-lg-4">
         <div class="panel-card p-4">
