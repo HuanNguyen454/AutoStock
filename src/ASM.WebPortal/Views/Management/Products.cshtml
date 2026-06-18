@@ -47,6 +47,93 @@
         <div class="border-top pt-4 mt-4">
             @if (Model.LocationResults.Any())
             {
+                @if (Model.WarehouseMaps.Any())
+                {
+                    <div class="product-map-stack mb-4">
+                        @foreach (var warehouseMap in Model.WarehouseMaps)
+                        {
+                            <section class="product-map-panel">
+                                <div class="product-map-head">
+                                    <div>
+                                        <div class="product-map-kicker">Warehouse grid</div>
+                                        <h2 class="product-map-title">@warehouseMap.WarehouseName</h2>
+                                        <div class="product-map-subtitle">@warehouseMap.WarehouseCode</div>
+                                    </div>
+                                    <div class="product-map-legend">
+                                        <span><i class="product-map-dot product-map-dot-hit"></i> Found</span>
+                                        <span><i class="product-map-dot product-map-dot-occupied"></i> Occupied</span>
+                                        <span><i class="product-map-dot product-map-dot-empty"></i> Empty</span>
+                                    </div>
+                                </div>
+
+                                @if (warehouseMap.RouteSummaries.Any())
+                                {
+                                    <div class="product-route-list">
+                                        @foreach (var route in warehouseMap.RouteSummaries)
+                                        {
+                                            <div class="product-route-pill">
+                                                <span class="product-route-start">Start</span>
+                                                <span class="product-route-arrow">-></span>
+                                                <span>@route</span>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+
+                                <div class="product-map-area-grid">
+                                    @foreach (var area in warehouseMap.Areas)
+                                    {
+                                        <article class="product-map-area @(area.HighlightedSlotCount > 0 ? "is-active" : string.Empty)">
+                                            <div class="product-map-area-head">
+                                                <div>
+                                                    <div class="product-map-label">Area</div>
+                                                    <div class="product-map-area-name">@area.Name</div>
+                                                </div>
+                                                <span class="product-map-count">@area.HighlightedSlotCount found</span>
+                                            </div>
+
+                                            <div class="product-map-rack-stack">
+                                                @foreach (var rack in area.Racks)
+                                                {
+                                                    <div class="product-map-rack-row">
+                                                        <div class="product-map-rack-name">@rack.Name</div>
+                                                        <div class="product-map-slot-grid">
+                                                            @foreach (var slot in rack.Slots)
+                                                            {
+                                                                var slotClass = slot.HasMatch
+                                                                    ? "is-match"
+                                                                    : slot.IsOccupied ? "is-occupied" : "is-empty";
+
+                                                                <div class="product-map-slot @slotClass" title="@slot.MatchSummary @slot.QuantitySummary @slot.Note">
+                                                                    <div class="product-map-slot-name">@slot.Name</div>
+                                                                    @if (slot.HasMatch)
+                                                                    {
+                                                                        <div class="product-map-slot-product">@slot.MatchSummary</div>
+                                                                        <div class="product-map-slot-meta">@slot.QuantitySummary</div>
+                                                                        <div class="product-map-slot-meta">@slot.Note</div>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <div class="product-map-slot-meta">@(slot.IsOccupied ? "Occupied" : "Empty")</div>
+                                                                    }
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </article>
+                                    }
+                                </div>
+                            </section>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="layout-inline-empty mb-4">Matching products were found, but none of them are currently assigned to a slot.</div>
+                }
+
                 <div class="table-responsive">
                     <table class="table align-middle">
                         <thead>
