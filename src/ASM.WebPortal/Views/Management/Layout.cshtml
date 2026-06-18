@@ -7,6 +7,15 @@
     var slotCount = Model.Layout?.Areas.SelectMany(x => x.Racks).SelectMany(x => x.Slots).Count() ?? 0;
 }
 
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
 <div class="panel-card p-4 mb-4">
     <form method="get" class="row g-3 align-items-end">
         <div class="col-md-7">
@@ -152,6 +161,20 @@
                                 </div>
                             </div>
 
+                            <div class="layout-manage-row mb-3">
+                                <form asp-action="UpdateArea" method="post" class="layout-inline-edit">
+                                    <input type="hidden" name="selectedWarehouseId" value="@Model.SelectedWarehouseId" />
+                                    <input type="hidden" name="areaId" value="@area.Id" />
+                                    <input name="areaName" class="form-control form-control-sm" value="@area.Name" aria-label="Area name" />
+                                    <button class="btn btn-sm btn-dark">Save Area</button>
+                                </form>
+                                <form asp-action="DeleteArea" method="post" onsubmit="return confirm('Delete this area?');">
+                                    <input type="hidden" name="selectedWarehouseId" value="@Model.SelectedWarehouseId" />
+                                    <input type="hidden" name="areaId" value="@area.Id" />
+                                    <button class="btn btn-sm btn-outline-danger">Delete Area</button>
+                                </form>
+                            </div>
+
                             @if (area.Racks.Any())
                             {
                                 <div class="layout-rack-stack">
@@ -171,6 +194,20 @@
                                                         <a class="btn btn-sm btn-outline-dark" asp-action="DownloadQr" asp-controller="Management" asp-route-qrId="@rackQr.Id">Rack QR</a>
                                                     </div>
                                                 }
+                                            </div>
+
+                                            <div class="layout-manage-row mb-3">
+                                                <form asp-action="UpdateRack" method="post" class="layout-inline-edit">
+                                                    <input type="hidden" name="selectedWarehouseId" value="@Model.SelectedWarehouseId" />
+                                                    <input type="hidden" name="rackId" value="@rack.Id" />
+                                                    <input name="rackName" class="form-control form-control-sm" value="@rack.Name" aria-label="Rack name" />
+                                                    <button class="btn btn-sm btn-dark">Save Rack</button>
+                                                </form>
+                                                <form asp-action="DeleteRack" method="post" onsubmit="return confirm('Delete this rack?');">
+                                                    <input type="hidden" name="selectedWarehouseId" value="@Model.SelectedWarehouseId" />
+                                                    <input type="hidden" name="rackId" value="@rack.Id" />
+                                                    <button class="btn btn-sm btn-outline-danger">Delete Rack</button>
+                                                </form>
                                             </div>
 
                                             @if (rack.Slots.Any())
@@ -193,6 +230,19 @@
                                                                     <a class="btn btn-sm btn-outline-dark" asp-action="DownloadQr" asp-controller="Management" asp-route-qrId="@slotQr.Id">Slot QR</a>
                                                                 </div>
                                                             }
+                                                            <div class="slot-edit-stack">
+                                                                <form asp-action="UpdateSlot" method="post" class="layout-inline-edit">
+                                                                    <input type="hidden" name="selectedWarehouseId" value="@Model.SelectedWarehouseId" />
+                                                                    <input type="hidden" name="slotId" value="@slot.Id" />
+                                                                    <input name="slotName" class="form-control form-control-sm" value="@slot.Name" aria-label="Slot name" />
+                                                                    <button class="btn btn-sm btn-dark">Save</button>
+                                                                </form>
+                                                                <form asp-action="DeleteSlot" method="post" onsubmit="return confirm('Delete this slot?');">
+                                                                    <input type="hidden" name="selectedWarehouseId" value="@Model.SelectedWarehouseId" />
+                                                                    <input type="hidden" name="slotId" value="@slot.Id" />
+                                                                    <button class="btn btn-sm btn-outline-danger w-100">Delete Slot</button>
+                                                                </form>
+                                                            </div>
                                                         </div>
                                                     }
                                                 </div>

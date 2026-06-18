@@ -97,6 +97,135 @@
     </article>
 </section>
 
+@if (Model.WarehouseMaps.Any())
+{
+    <section class="dashboard-map-section mb-4">
+        <div class="panel-card p-4">
+            <div class="dashboard-section-head">
+                <div>
+                    <div class="dashboard-section-title">Warehouse Layout Map</div>
+                    <div class="dashboard-section-subtitle">Overview of Warehouse, Area, Rack, Slot, Pallet and Product placement</div>
+                </div>
+                <a class="btn btn-sm btn-outline-dark" asp-controller="Management" asp-action="Layout">Manage layout</a>
+            </div>
+
+            <div class="dashboard-map-stack">
+                @foreach (var warehouse in Model.WarehouseMaps)
+                {
+                    <article class="dashboard-map-panel">
+                        <div class="dashboard-map-head">
+                            <div>
+                                <div class="dashboard-map-kicker">@warehouse.WarehouseCode</div>
+                                <h2 class="dashboard-map-title">@warehouse.WarehouseName</h2>
+                                <div class="dashboard-map-subtitle">
+                                    @warehouse.AreaCount areas / @warehouse.RackCount racks / @warehouse.SlotCount slots
+                                </div>
+                            </div>
+                            <div class="dashboard-map-stats">
+                                <span>@warehouse.PalletCount pallets</span>
+                                <span>@warehouse.ProductCount products</span>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-map-legend mt-3">
+                            <span><i class="dashboard-map-dot dashboard-map-dot-pallet"></i>Has pallet</span>
+                            <span><i class="dashboard-map-dot dashboard-map-dot-reserved"></i>Occupied</span>
+                            <span><i class="dashboard-map-dot dashboard-map-dot-empty"></i>Empty</span>
+                        </div>
+
+                        @if (warehouse.Areas.Any())
+                        {
+                            <div class="dashboard-map-area-grid mt-3">
+                                @foreach (var area in warehouse.Areas)
+                                {
+                                    <section class="dashboard-map-area @(area.OccupiedSlotCount > 0 ? "has-stock" : string.Empty)">
+                                        <div class="dashboard-map-area-head">
+                                            <div>
+                                                <div class="dashboard-map-area-name">@area.Name</div>
+                                                <div class="dashboard-map-subtitle">@area.Racks.Count racks</div>
+                                            </div>
+                                            <span class="dashboard-map-count">@area.OccupiedSlotCount used</span>
+                                        </div>
+
+                                        @if (area.Racks.Any())
+                                        {
+                                            <div class="dashboard-map-rack-stack">
+                                                @foreach (var rack in area.Racks)
+                                                {
+                                                    <div class="dashboard-map-rack-row">
+                                                        <div class="dashboard-map-rack-name">@rack.Name</div>
+                                                        <div class="dashboard-map-slot-grid">
+                                                            @foreach (var slot in rack.Slots)
+                                                            {
+                                                                var slotClass = slot.Pallets.Any()
+                                                                    ? "has-pallet"
+                                                                    : slot.IsOccupied ? "is-occupied" : "is-empty";
+
+                                                                <article class="dashboard-map-slot @slotClass">
+                                                                    <div class="dashboard-map-slot-name">@slot.Name</div>
+                                                                    @if (slot.Pallets.Any())
+                                                                    {
+                                                                        @foreach (var pallet in slot.Pallets)
+                                                                        {
+                                                                            var productPreview = pallet.Products.Take(3).ToList();
+                                                                            <div class="dashboard-map-pallet">
+                                                                                <div class="dashboard-map-pallet-code">@pallet.Code</div>
+                                                                                <div class="dashboard-map-pallet-status">@pallet.Status</div>
+                                                                                @if (productPreview.Any())
+                                                                                {
+                                                                                    <div class="dashboard-map-product-list">
+                                                                                        @foreach (var product in productPreview)
+                                                                                        {
+                                                                                            <div class="dashboard-map-product">
+                                                                                                <span>@product.Name</span>
+                                                                                                <strong>x @product.Quantity</strong>
+                                                                                            </div>
+                                                                                        }
+                                                                                    </div>
+                                                                                    @if (pallet.Products.Count > productPreview.Count)
+                                                                                    {
+                                                                                        <div class="dashboard-map-more">+@(pallet.Products.Count - productPreview.Count) more</div>
+                                                                                    }
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                    <div class="dashboard-map-empty-note">Empty pallet</div>
+                                                                                }
+                                                                            </div>
+                                                                        }
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <div class="dashboard-map-empty-note">
+                                                                            @(slot.IsOccupied ? "Occupied" : "Empty")
+                                                                        </div>
+                                                                    }
+                                                                </article>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="layout-empty-state mt-3">No racks in this area yet.</div>
+                                        }
+                                    </section>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="layout-empty-state mt-3">No areas in this warehouse yet.</div>
+                        }
+                    </article>
+                }
+            </div>
+        </div>
+    </section>
+}
+
 <section class="row g-4 mb-4">
     <div class="col-lg-5">
         <div class="panel-card p-4 h-100">
