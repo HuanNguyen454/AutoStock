@@ -2,6 +2,15 @@
 @{
     ViewData["Title"] = "Warehouses";
 }
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
 <div class="row g-4">
     <div class="col-lg-4">
         <div class="panel-card p-4">
@@ -16,20 +25,32 @@
     </div>
     <div class="col-lg-8">
         <div class="panel-card p-4">
-            <table class="table">
-                <thead><tr><th>Name</th><th>Code</th><th>Address</th><th>QR</th></tr></thead>
+            <table class="table align-middle">
+                <thead><tr><th>Warehouse</th><th>QR</th><th>Delete</th></tr></thead>
                 <tbody>
                 @foreach (var item in Model.Warehouses)
                 {
                     <tr>
-                        <td>@item.Name</td>
-                        <td>@item.Code</td>
-                        <td>@item.Address</td>
+                        <td>
+                            <form asp-action="UpdateWarehouse" method="post" class="warehouse-edit-row">
+                                <input type="hidden" name="warehouseId" value="@item.Id" />
+                                <input name="name" class="form-control" value="@item.Name" aria-label="Warehouse name" />
+                                <input name="code" class="form-control" value="@item.Code" aria-label="Warehouse code" />
+                                <input name="address" class="form-control" value="@item.Address" aria-label="Warehouse address" />
+                                <button class="btn btn-sm btn-dark">Save</button>
+                            </form>
+                        </td>
                         <td>
                             @if (Model.QrCodes.TryGetValue(item.Id, out var qr))
                             {
                                 <a class="btn btn-sm btn-outline-dark" asp-action="DownloadQr" asp-controller="Management" asp-route-qrId="@qr.Id">Download QR</a>
                             }
+                        </td>
+                        <td>
+                            <form asp-action="DeleteWarehouse" method="post" onsubmit="return confirm('Delete this warehouse?');">
+                                <input type="hidden" name="warehouseId" value="@item.Id" />
+                                <button class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
                         </td>
                     </tr>
                 }

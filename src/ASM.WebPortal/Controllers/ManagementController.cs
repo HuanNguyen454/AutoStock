@@ -34,12 +34,57 @@ public class ManagementController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateWarehouse(WarehousesPageViewModel model, CancellationToken cancellationToken)
     {
-        var created = await warehouseService.CreateWarehouseAsync(
-            new CreateWarehouseRequest(model.Name, model.Code, model.Address),
-            cancellationToken);
-        await qrService.GenerateAsync(
-            new CreateQrRequest(QrTargetType.Warehouse, created.Id, $"Warehouse - {created.Name}"),
-            cancellationToken);
+        try
+        {
+            var created = await warehouseService.CreateWarehouseAsync(
+                new CreateWarehouseRequest(model.Name, model.Code, model.Address),
+                cancellationToken);
+            await qrService.GenerateAsync(
+                new CreateQrRequest(QrTargetType.Warehouse, created.Id, $"Warehouse - {created.Name}"),
+                cancellationToken);
+            TempData["SuccessMessage"] = "Warehouse created.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Warehouses));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateWarehouse(Guid warehouseId, string name, string code, string address, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await warehouseService.UpdateWarehouseAsync(
+                new UpdateWarehouseRequest(warehouseId, name, code, address),
+                cancellationToken);
+            TempData["SuccessMessage"] = "Warehouse updated.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Warehouses));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteWarehouse(Guid warehouseId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await warehouseService.DeleteWarehouseAsync(warehouseId, cancellationToken);
+            TempData["SuccessMessage"] = "Warehouse deleted.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
         return RedirectToAction(nameof(Warehouses));
     }
 
@@ -109,39 +154,168 @@ public class ManagementController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddArea(LayoutPageViewModel model, CancellationToken cancellationToken)
     {
-        var created = await warehouseService.AddAreaAsync(
-            new CreateAreaRequest(model.SelectedWarehouseId, model.AreaName),
-            cancellationToken);
-        await qrService.GenerateAsync(
-            new CreateQrRequest(QrTargetType.Area, created.Id, $"Area - {created.Name}"),
-            cancellationToken);
+        try
+        {
+            var created = await warehouseService.AddAreaAsync(
+                new CreateAreaRequest(model.SelectedWarehouseId, model.AreaName),
+                cancellationToken);
+            await qrService.GenerateAsync(
+                new CreateQrRequest(QrTargetType.Area, created.Id, $"Area - {created.Name}"),
+                cancellationToken);
+            TempData["SuccessMessage"] = "Area created.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
         return RedirectToAction(nameof(Layout), new { warehouseId = model.SelectedWarehouseId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateArea(Guid selectedWarehouseId, Guid areaId, string areaName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await warehouseService.UpdateAreaAsync(new UpdateAreaRequest(areaId, areaName), cancellationToken);
+            TempData["SuccessMessage"] = "Area updated.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Layout), new { warehouseId = selectedWarehouseId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteArea(Guid selectedWarehouseId, Guid areaId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await warehouseService.DeleteAreaAsync(areaId, cancellationToken);
+            TempData["SuccessMessage"] = "Area deleted.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Layout), new { warehouseId = selectedWarehouseId });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddRack(LayoutPageViewModel model, CancellationToken cancellationToken)
     {
-        var created = await warehouseService.AddRackAsync(
-            new CreateRackRequest(model.AreaId, model.RackName),
-            cancellationToken);
-        await qrService.GenerateAsync(
-            new CreateQrRequest(QrTargetType.Rack, created.Id, $"Rack - {created.Name}"),
-            cancellationToken);
+        try
+        {
+            var created = await warehouseService.AddRackAsync(
+                new CreateRackRequest(model.AreaId, model.RackName),
+                cancellationToken);
+            await qrService.GenerateAsync(
+                new CreateQrRequest(QrTargetType.Rack, created.Id, $"Rack - {created.Name}"),
+                cancellationToken);
+            TempData["SuccessMessage"] = "Rack created.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
         return RedirectToAction(nameof(Layout), new { warehouseId = model.SelectedWarehouseId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateRack(Guid selectedWarehouseId, Guid rackId, string rackName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await warehouseService.UpdateRackAsync(new UpdateRackRequest(rackId, rackName), cancellationToken);
+            TempData["SuccessMessage"] = "Rack updated.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Layout), new { warehouseId = selectedWarehouseId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteRack(Guid selectedWarehouseId, Guid rackId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await warehouseService.DeleteRackAsync(rackId, cancellationToken);
+            TempData["SuccessMessage"] = "Rack deleted.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Layout), new { warehouseId = selectedWarehouseId });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddSlot(LayoutPageViewModel model, CancellationToken cancellationToken)
     {
-        var created = await warehouseService.AddSlotAsync(
-            new CreateSlotRequest(model.RackId, model.SlotName),
-            cancellationToken);
-        await qrService.GenerateAsync(
-            new CreateQrRequest(QrTargetType.Slot, created.Id, $"Slot - {created.Name}"),
-            cancellationToken);
+        try
+        {
+            var created = await warehouseService.AddSlotAsync(
+                new CreateSlotRequest(model.RackId, model.SlotName),
+                cancellationToken);
+            await qrService.GenerateAsync(
+                new CreateQrRequest(QrTargetType.Slot, created.Id, $"Slot - {created.Name}"),
+                cancellationToken);
+            TempData["SuccessMessage"] = "Slot created.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
         return RedirectToAction(nameof(Layout), new { warehouseId = model.SelectedWarehouseId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateSlot(Guid selectedWarehouseId, Guid slotId, string slotName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await warehouseService.UpdateSlotAsync(new UpdateSlotRequest(slotId, slotName), cancellationToken);
+            TempData["SuccessMessage"] = "Slot updated.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Layout), new { warehouseId = selectedWarehouseId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteSlot(Guid selectedWarehouseId, Guid slotId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await warehouseService.DeleteSlotAsync(slotId, cancellationToken);
+            TempData["SuccessMessage"] = "Slot deleted.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Layout), new { warehouseId = selectedWarehouseId });
     }
 
     [HttpPost]
@@ -162,6 +336,13 @@ public class ManagementController(
         var products = await catalogService.GetProductsAsync(categoryId, keyword, cancellationToken);
         var categories = await catalogService.GetCategoriesAsync(cancellationToken);
         var hasSearched = !string.IsNullOrWhiteSpace(keyword) || categoryId.HasValue;
+        var locationResults = hasSearched
+            ? await catalogService.SearchProductLocationsAsync(keyword, categoryId, cancellationToken)
+            : [];
+        var warehouseMaps = hasSearched
+            ? await BuildProductWarehouseMapsAsync(locationResults, cancellationToken)
+            : [];
+
         return View(new ProductsPageViewModel
         {
             Products = products,
@@ -169,9 +350,8 @@ public class ManagementController(
             Keyword = keyword,
             CategoryId = categoryId,
             HasSearched = hasSearched,
-            LocationResults = hasSearched
-                ? await catalogService.SearchProductLocationsAsync(keyword, categoryId, cancellationToken)
-                : [],
+            LocationResults = locationResults,
+            WarehouseMaps = warehouseMaps,
             QrCodes = await EnsureQrsAsync(
                 products,
                 x => x.Id,
@@ -179,6 +359,125 @@ public class ManagementController(
                 QrTargetType.Product,
                 cancellationToken)
         });
+    }
+
+    private async Task<IReadOnlyList<ProductWarehouseMapViewModel>> BuildProductWarehouseMapsAsync(
+        IReadOnlyList<ProductLocationSearchResultDto> locationResults,
+        CancellationToken cancellationToken)
+    {
+        var locatedResults = locationResults
+            .Where(x => x.SlotId.HasValue)
+            .ToList();
+        if (locatedResults.Count == 0)
+        {
+            return [];
+        }
+
+        var matchesBySlot = locatedResults
+            .GroupBy(x => x.SlotId!.Value)
+            .ToDictionary(x => x.Key, x => x.ToList());
+        var routeSummariesByWarehouse = locatedResults
+            .Where(x => !string.IsNullOrWhiteSpace(x.WarehouseName) && !string.IsNullOrWhiteSpace(x.LocationPath))
+            .GroupBy(x => x.WarehouseName!)
+            .ToDictionary(
+                x => x.Key,
+                x => (IReadOnlyCollection<string>)x
+                    .Select(result => result.LocationPath)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(path => path)
+                    .ToList(),
+                StringComparer.OrdinalIgnoreCase);
+
+        var maps = new List<ProductWarehouseMapViewModel>();
+        var warehouses = await warehouseService.GetWarehousesAsync(cancellationToken);
+        foreach (var warehouse in warehouses)
+        {
+            var layout = await warehouseService.GetLayoutAsync(warehouse.Id, cancellationToken);
+            if (layout is null)
+            {
+                continue;
+            }
+
+            var hasAnyMatch = layout.Areas
+                .SelectMany(area => area.Racks)
+                .SelectMany(rack => rack.Slots)
+                .Any(slot => matchesBySlot.ContainsKey(slot.Id));
+            if (!hasAnyMatch)
+            {
+                continue;
+            }
+
+            var areas = layout.Areas
+                .Select(area =>
+                {
+                    var racks = area.Racks
+                        .Select(rack => new ProductMapRackViewModel
+                        {
+                            Name = rack.Name,
+                            Slots = rack.Slots
+                                .Select(slot => BuildProductMapSlot(slot, matchesBySlot))
+                                .ToList()
+                        })
+                        .ToList();
+
+                    return new ProductMapAreaViewModel
+                    {
+                        Name = area.Name,
+                        HighlightedSlotCount = racks.Sum(rack => rack.Slots.Count(slot => slot.HasMatch)),
+                        Racks = racks
+                    };
+                })
+                .ToList();
+
+            maps.Add(new ProductWarehouseMapViewModel
+            {
+                WarehouseName = layout.Warehouse.Name,
+                WarehouseCode = layout.Warehouse.Code,
+                RouteSummaries = routeSummariesByWarehouse.GetValueOrDefault(layout.Warehouse.Name) ?? [],
+                Areas = areas
+            });
+        }
+
+        return maps;
+    }
+
+    private static ProductMapSlotViewModel BuildProductMapSlot(
+        SlotDto slot,
+        IReadOnlyDictionary<Guid, List<ProductLocationSearchResultDto>> matchesBySlot)
+    {
+        if (!matchesBySlot.TryGetValue(slot.Id, out var matches))
+        {
+            return new ProductMapSlotViewModel
+            {
+                Id = slot.Id,
+                Name = slot.Name,
+                IsOccupied = slot.IsOccupied
+            };
+        }
+
+        var productNames = matches
+            .Select(x => x.ProductName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x)
+            .ToList();
+        var palletCodes = matches
+            .Select(x => x.PalletCode)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x)
+            .ToList();
+        var totalQuantity = matches.Sum(x => x.InventoryItemId.HasValue ? x.Quantity : 0);
+
+        return new ProductMapSlotViewModel
+        {
+            Id = slot.Id,
+            Name = slot.Name,
+            IsOccupied = slot.IsOccupied,
+            HasMatch = true,
+            MatchSummary = string.Join(", ", productNames),
+            QuantitySummary = totalQuantity > 0 ? $"Qty {totalQuantity}" : string.Empty,
+            Note = palletCodes.Count > 0 ? $"Pallet {string.Join(", ", palletCodes)}" : string.Empty
+        };
     }
 
     [HttpPost]

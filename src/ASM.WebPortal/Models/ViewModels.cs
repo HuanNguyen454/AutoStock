@@ -22,6 +22,56 @@ public class DashboardPageViewModel
     public DashboardSummaryDto Summary { get; set; } = new(0, 0, 0, 0, 0, 0, []);
     public IReadOnlyCollection<InboundOrderDto> InboundOrders { get; set; } = [];
     public IReadOnlyCollection<OutboundOrderDto> OutboundOrders { get; set; } = [];
+    public IReadOnlyCollection<DashboardWarehouseMapViewModel> WarehouseMaps { get; set; } = [];
+}
+
+public class DashboardWarehouseMapViewModel
+{
+    public Guid WarehouseId { get; set; }
+    public string WarehouseName { get; set; } = string.Empty;
+    public string WarehouseCode { get; set; } = string.Empty;
+    public int AreaCount { get; set; }
+    public int RackCount { get; set; }
+    public int SlotCount { get; set; }
+    public int PalletCount { get; set; }
+    public int ProductCount { get; set; }
+    public IReadOnlyCollection<DashboardMapAreaViewModel> Areas { get; set; } = [];
+}
+
+public class DashboardMapAreaViewModel
+{
+    public string Name { get; set; } = string.Empty;
+    public int OccupiedSlotCount { get; set; }
+    public IReadOnlyCollection<DashboardMapRackViewModel> Racks { get; set; } = [];
+}
+
+public class DashboardMapRackViewModel
+{
+    public string Name { get; set; } = string.Empty;
+    public IReadOnlyCollection<DashboardMapSlotViewModel> Slots { get; set; } = [];
+}
+
+public class DashboardMapSlotViewModel
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public bool IsOccupied { get; set; }
+    public IReadOnlyCollection<DashboardMapPalletViewModel> Pallets { get; set; } = [];
+}
+
+public class DashboardMapPalletViewModel
+{
+    public string Code { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public IReadOnlyCollection<DashboardMapProductViewModel> Products { get; set; } = [];
+}
+
+public class DashboardMapProductViewModel
+{
+    public string Name { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public string? LotNumber { get; set; }
+    public DateTime? ExpiryDate { get; set; }
 }
 
 public class AdminDashboardPageViewModel
@@ -97,6 +147,7 @@ public class ProductsPageViewModel
     public Guid? CategoryId { get; set; }
     public bool HasSearched { get; set; }
     public IReadOnlyList<ProductLocationSearchResultDto> LocationResults { get; set; } = [];
+    public IReadOnlyList<ProductWarehouseMapViewModel> WarehouseMaps { get; set; } = [];
     public string Sku { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
@@ -104,6 +155,38 @@ public class ProductsPageViewModel
     public string CategoryCode { get; set; } = string.Empty;
     public string CategoryName { get; set; } = string.Empty;
     public string? CategoryDescription { get; set; }
+}
+
+public class ProductWarehouseMapViewModel
+{
+    public string WarehouseName { get; set; } = string.Empty;
+    public string WarehouseCode { get; set; } = string.Empty;
+    public IReadOnlyCollection<string> RouteSummaries { get; set; } = [];
+    public IReadOnlyCollection<ProductMapAreaViewModel> Areas { get; set; } = [];
+}
+
+public class ProductMapAreaViewModel
+{
+    public string Name { get; set; } = string.Empty;
+    public int HighlightedSlotCount { get; set; }
+    public IReadOnlyCollection<ProductMapRackViewModel> Racks { get; set; } = [];
+}
+
+public class ProductMapRackViewModel
+{
+    public string Name { get; set; } = string.Empty;
+    public IReadOnlyCollection<ProductMapSlotViewModel> Slots { get; set; } = [];
+}
+
+public class ProductMapSlotViewModel
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public bool IsOccupied { get; set; }
+    public bool HasMatch { get; set; }
+    public string MatchSummary { get; set; } = string.Empty;
+    public string QuantitySummary { get; set; } = string.Empty;
+    public string Note { get; set; } = string.Empty;
 }
 
 public class PalletsPageViewModel

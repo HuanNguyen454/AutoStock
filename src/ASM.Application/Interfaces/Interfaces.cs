@@ -31,9 +31,17 @@ public interface IWarehouseService
 {
     Task<IReadOnlyCollection<WarehouseDto>> GetWarehousesAsync(CancellationToken cancellationToken);
     Task<WarehouseDto> CreateWarehouseAsync(CreateWarehouseRequest request, CancellationToken cancellationToken);
+    Task<WarehouseDto> UpdateWarehouseAsync(UpdateWarehouseRequest request, CancellationToken cancellationToken);
+    Task DeleteWarehouseAsync(Guid warehouseId, CancellationToken cancellationToken);
     Task<AreaDto> AddAreaAsync(CreateAreaRequest request, CancellationToken cancellationToken);
+    Task<AreaDto> UpdateAreaAsync(UpdateAreaRequest request, CancellationToken cancellationToken);
+    Task DeleteAreaAsync(Guid areaId, CancellationToken cancellationToken);
     Task<RackDto> AddRackAsync(CreateRackRequest request, CancellationToken cancellationToken);
+    Task<RackDto> UpdateRackAsync(UpdateRackRequest request, CancellationToken cancellationToken);
+    Task DeleteRackAsync(Guid rackId, CancellationToken cancellationToken);
     Task<SlotDto> AddSlotAsync(CreateSlotRequest request, CancellationToken cancellationToken);
+    Task<SlotDto> UpdateSlotAsync(UpdateSlotRequest request, CancellationToken cancellationToken);
+    Task DeleteSlotAsync(Guid slotId, CancellationToken cancellationToken);
     Task<WarehouseLayoutDto?> GetLayoutAsync(Guid warehouseId, CancellationToken cancellationToken);
 }
 
