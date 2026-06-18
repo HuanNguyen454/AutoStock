@@ -157,12 +157,21 @@ public class ManagementController(
         return RedirectToAction(nameof(Layout), new { warehouseId = model.SelectedWarehouseId });
     }
 
-    public async Task<IActionResult> Products(CancellationToken cancellationToken)
+    public async Task<IActionResult> Products(string? keyword, Guid? categoryId, CancellationToken cancellationToken)
     {
-        var products = await catalogService.GetProductsAsync(cancellationToken);
+        var products = await catalogService.GetProductsAsync(categoryId, keyword, cancellationToken);
+        var categories = await catalogService.GetCategoriesAsync(cancellationToken);
+        var hasSearched = !string.IsNullOrWhiteSpace(keyword) || categoryId.HasValue;
         return View(new ProductsPageViewModel
         {
             Products = products,
+            Categories = categories,
+            Keyword = keyword,
+            CategoryId = categoryId,
+            HasSearched = hasSearched,
+            LocationResults = hasSearched
+                ? await catalogService.SearchProductLocationsAsync(keyword, categoryId, cancellationToken)
+                : [],
             QrCodes = await EnsureQrsAsync(
                 products,
                 x => x.Id,
@@ -177,10 +186,20 @@ public class ManagementController(
     public async Task<IActionResult> CreateProduct(ProductsPageViewModel model, CancellationToken cancellationToken)
     {
         var created = await catalogService.CreateProductAsync(
-            new CreateProductRequest(model.Sku, model.Name, model.Description),
+            new CreateProductRequest(model.Sku, model.Name, model.Description, model.CategoryId, model.Brand),
             cancellationToken);
         await qrService.GenerateAsync(
             new CreateQrRequest(QrTargetType.Product, created.Id, $"Product - {created.Sku}"),
+            cancellationToken);
+        return RedirectToAction(nameof(Products));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateCategory(ProductsPageViewModel model, CancellationToken cancellationToken)
+    {
+        await catalogService.CreateCategoryAsync(
+            new CreateCategoryRequest(model.CategoryCode, model.CategoryName, model.CategoryDescription),
             cancellationToken);
         return RedirectToAction(nameof(Products));
     }

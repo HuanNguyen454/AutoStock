@@ -17,6 +17,7 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
     public DbSet<Rack> Racks => Set<Rack>();
     public DbSet<Slot> Slots => Set<Slot>();
     public DbSet<Pallet> Pallets => Set<Pallet>();
+    public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
     public DbSet<QrCode> QrCodes => Set<QrCode>();
@@ -35,7 +36,11 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
 
         builder.Entity<Tenant>().HasIndex(x => x.Code).IsUnique();
         builder.Entity<Warehouse>().HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
+        builder.Entity<ProductCategory>().HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
         builder.Entity<Product>().HasIndex(x => new { x.TenantId, x.Sku }).IsUnique();
+        builder.Entity<Product>().HasIndex(x => x.CategoryId);
+        builder.Entity<InventoryItem>().HasIndex(x => new { x.TenantId, x.ProductId, x.ExpiryDate });
+        builder.Entity<InventoryItem>().HasIndex(x => x.ExpiryDate);
         builder.Entity<Pallet>().HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
         builder.Entity<QrCode>().HasIndex(x => new { x.TenantId, x.Payload }).IsUnique();
         builder.Entity<RefreshToken>().HasIndex(x => x.Token).IsUnique();
@@ -44,6 +49,12 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
             .HasOne(x => x.CurrentSlot)
             .WithMany(x => x.CurrentPallets)
             .HasForeignKey(x => x.CurrentSlotId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Product>()
+            .HasOne(x => x.Category)
+            .WithMany(x => x.Products)
+            .HasForeignKey(x => x.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.Entity<InventoryItem>()
@@ -140,6 +151,12 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
             .HasOne(x => x.Product)
             .WithMany()
             .HasForeignKey(x => x.ProductId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<OutboundOrderLine>()
+            .HasOne(x => x.InventoryItem)
+            .WithMany()
+            .HasForeignKey(x => x.InventoryItemId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.Entity<OutboundOrderLine>()

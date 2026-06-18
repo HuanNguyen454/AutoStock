@@ -65,11 +65,23 @@ public class Pallet : TenantEntity
     public ICollection<InventoryItem> InventoryItems { get; set; } = [];
 }
 
+public class ProductCategory : TenantEntity
+{
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public ICollection<Product> Products { get; set; } = [];
+}
+
 public class Product : TenantEntity
 {
+    public Guid? CategoryId { get; set; }
     public string Sku { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string? Brand { get; set; }
+    public ProductCategory? Category { get; set; }
     public ICollection<InventoryItem> InventoryItems { get; set; } = [];
 }
 
@@ -77,6 +89,8 @@ public class InventoryItem : TenantEntity
 {
     public Guid ProductId { get; set; }
     public Guid PalletId { get; set; }
+    public string? LotNumber { get; set; }
+    public DateTime? ExpiryDate { get; set; }
     public int Quantity { get; set; }
     public Product? Product { get; set; }
     public Pallet? Pallet { get; set; }
@@ -121,6 +135,8 @@ public class InboundOrderLine : TenantEntity
     public Guid ProductId { get; set; }
     public Guid PalletId { get; set; }
     public Guid TargetSlotId { get; set; }
+    public string? LotNumber { get; set; }
+    public DateTime? ExpiryDate { get; set; }
     public int Quantity { get; set; }
     public InboundOrder? InboundOrder { get; set; }
     public Product? Product { get; set; }
@@ -146,11 +162,15 @@ public class OutboundOrderLine : TenantEntity
 {
     public Guid OutboundOrderId { get; set; }
     public Guid ProductId { get; set; }
+    public Guid? InventoryItemId { get; set; }
     public Guid SourcePalletId { get; set; }
     public Guid SourceSlotId { get; set; }
+    public string? LotNumber { get; set; }
+    public DateTime? ExpiryDate { get; set; }
     public int Quantity { get; set; }
     public OutboundOrder? OutboundOrder { get; set; }
     public Product? Product { get; set; }
+    public InventoryItem? InventoryItem { get; set; }
     public Pallet? SourcePallet { get; set; }
     public Slot? SourceSlot { get; set; }
 }

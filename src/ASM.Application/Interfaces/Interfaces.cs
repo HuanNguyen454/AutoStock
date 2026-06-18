@@ -39,10 +39,21 @@ public interface IWarehouseService
 
 public interface ICatalogService
 {
+    Task<IReadOnlyCollection<ProductCategoryDto>> GetCategoriesAsync(CancellationToken cancellationToken);
+    Task<ProductCategoryDto> CreateCategoryAsync(CreateCategoryRequest request, CancellationToken cancellationToken);
+    Task<ProductCategoryDto> UpdateCategoryAsync(UpdateCategoryRequest request, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<ProductDto>> GetProductsAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<ProductDto>> GetProductsAsync(Guid? categoryId, string? keyword, CancellationToken cancellationToken);
     Task<ProductDto> CreateProductAsync(CreateProductRequest request, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<PalletDto>> GetPalletsAsync(CancellationToken cancellationToken);
     Task<PalletDto> CreatePalletAsync(CreatePalletRequest request, CancellationToken cancellationToken);
+    Task<IReadOnlyList<ProductLocationSearchResultDto>> SearchProductLocationsAsync(
+        string keyword,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ProductLocationSearchResultDto>> SearchProductLocationsAsync(
+        string? keyword,
+        Guid? categoryId,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IQrService

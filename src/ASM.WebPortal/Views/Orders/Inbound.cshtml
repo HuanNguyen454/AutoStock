@@ -86,6 +86,16 @@
                 </div>
 
                 <div>
+                    <label asp-for="LotNumber" class="form-label">Lot Number</label>
+                    <input asp-for="LotNumber" class="form-control" placeholder="Lot number" />
+                </div>
+
+                <div>
+                    <label asp-for="ExpiryDate" class="form-label">Expiry Date</label>
+                    <input asp-for="ExpiryDate" type="date" class="form-control" />
+                </div>
+
+                <div>
                     <label asp-for="ReferenceCode" class="form-label">Reference Code</label>
                     <input asp-for="ReferenceCode" class="form-control" placeholder="Reference code" />
                 </div>
@@ -127,6 +137,9 @@
                             <div>
                                 <div class="order-meta-label">Product</div>
                                 <div class="order-meta-value">@line?.ProductName x @line?.Quantity</div>
+                                <div class="small text-muted">
+                                    Lot: @(line?.LotNumber ?? "-") | Expiry: @(line?.ExpiryDate?.ToString("yyyy-MM-dd") ?? "-")
+                                </div>
                             </div>
                             <div>
                                 <div class="order-meta-label">Pallet</div>

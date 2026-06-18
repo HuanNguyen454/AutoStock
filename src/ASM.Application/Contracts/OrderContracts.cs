@@ -24,6 +24,8 @@ public record InboundOrderLineDto(
     Guid TargetSlotId,
     string TargetSlotName,
     string TargetSlotPath,
+    string? LotNumber,
+    DateTime? ExpiryDate,
     int Quantity);
 
 public record CreateInboundOrderRequest(
@@ -33,7 +35,9 @@ public record CreateInboundOrderRequest(
     Guid PalletId,
     Guid TargetSlotId,
     int Quantity,
-    string ReferenceCode);
+    string ReferenceCode,
+    string? LotNumber = null,
+    DateTime? ExpiryDate = null);
 
 public record OutboundOrderDto(
     Guid Id,
@@ -51,12 +55,15 @@ public record OutboundOrderLineDto(
     Guid Id,
     Guid ProductId,
     string ProductName,
+    Guid? InventoryItemId,
     Guid SourcePalletId,
     string SourcePalletCode,
     string SourcePalletLocationPath,
     Guid SourceSlotId,
     string SourceSlotName,
     string SourceSlotPath,
+    string? LotNumber,
+    DateTime? ExpiryDate,
     int Quantity);
 
 public record CreateOutboundOrderRequest(
@@ -66,7 +73,8 @@ public record CreateOutboundOrderRequest(
     Guid SourcePalletId,
     Guid SourceSlotId,
     int Quantity,
-    string ReferenceCode);
+    string ReferenceCode,
+    Guid? InventoryItemId = null);
 
 public record TaskDto(
     Guid Id,
