@@ -1,8 +1,26 @@
 namespace ASM.Application.Contracts;
 
-public record ProductDto(Guid Id, string Sku, string Name, string? Description);
+public record ProductCategoryDto(
+    Guid Id,
+    string Code,
+    string Name,
+    string? Description,
+    bool IsActive);
 
-public record CreateProductRequest(string Sku, string Name, string? Description);
+public record CreateCategoryRequest(string Code, string Name, string? Description);
+
+public record UpdateCategoryRequest(Guid Id, string Code, string Name, string? Description, bool IsActive);
+
+public record ProductDto(
+    Guid Id,
+    string Sku,
+    string Name,
+    string? Description,
+    Guid? CategoryId,
+    string? CategoryName,
+    string? Brand);
+
+public record CreateProductRequest(string Sku, string Name, string? Description, Guid? CategoryId, string? Brand);
 
 public record PalletDto(
     Guid Id,
@@ -14,14 +32,23 @@ public record PalletDto(
 
 public record CreatePalletRequest(Guid WarehouseId, string Code);
 
-public record InventoryItemDto(Guid Id, Guid ProductId, string ProductName, int Quantity);
+public record InventoryItemDto(
+    Guid Id,
+    Guid ProductId,
+    string ProductName,
+    int Quantity,
+    string? LotNumber,
+    DateTime? ExpiryDate);
 
 public record ProductLocationSearchResultDto(
     Guid ProductId,
     string Sku,
     string ProductName,
+    string? CategoryName,
     Guid? InventoryItemId,
     int Quantity,
+    string? LotNumber,
+    DateTime? ExpiryDate,
     Guid? PalletId,
     string? PalletCode,
     string? PalletStatus,

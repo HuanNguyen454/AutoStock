@@ -31,7 +31,9 @@ public class OrdersController(
                 model.PalletId,
                 model.TargetSlotId,
                 model.Quantity,
-                model.ReferenceCode),
+                model.ReferenceCode,
+                model.LotNumber,
+                model.ExpiryDate),
             cancellationToken);
         return RedirectToAction(nameof(Inbound));
     }

@@ -133,6 +133,7 @@ public static class ServiceCollectionExtensions
         var owner = await EnsureUserAsync(userManager, demoTenant.Id, "Demo Owner", "owner@asm.local", RoleNames.Owner);
         await EnsureUserAsync(userManager, demoTenant.Id, "Demo Manager", "manager@asm.local", RoleNames.Manager);
         await EnsureUserAsync(userManager, demoTenant.Id, "Demo Staff", "staff@asm.local", RoleNames.Staff);
+        var demoCategories = await EnsureDemoCategoriesAsync(dbContext, demoTenant.Id);
 
         if (!await dbContext.Warehouses.AnyAsync(x => x.TenantId == demoTenant.Id))
         {
@@ -166,17 +167,30 @@ public static class ServiceCollectionExtensions
                 TenantId = demoTenant.Id,
                 Warehouse = warehouse,
                 Code = "PALLET-001",
-                Status = ASM.Domain.Enums.PalletStatus.Empty
+                CurrentSlot = slot,
+                Status = ASM.Domain.Enums.PalletStatus.Occupied
             };
+            slot.IsOccupied = true;
             var product = new Product
             {
                 TenantId = demoTenant.Id,
+                Category = demoCategories["DRINK"],
                 Sku = "SP-001",
                 Name = "Thung Sua Tuoi",
+                Brand = "Demo",
                 Description = "Seed product"
             };
+            var inventoryItem = new InventoryItem
+            {
+                TenantId = demoTenant.Id,
+                Product = product,
+                Pallet = pallet,
+                LotNumber = "LOT-SP001-A",
+                ExpiryDate = DateTime.UtcNow.Date.AddMonths(6),
+                Quantity = 50
+            };
 
-            dbContext.AddRange(warehouse, area, rack, slot, pallet, product);
+            dbContext.AddRange(warehouse, area, rack, slot, pallet, product, inventoryItem);
             await dbContext.SaveChangesAsync();
 
             dbContext.QrCodes.AddRange(
@@ -217,6 +231,54 @@ public static class ServiceCollectionExtensions
 
             await dbContext.SaveChangesAsync();
         }
+        else
+        {
+            var seededProduct = await dbContext.Products.FirstOrDefaultAsync(
+                x => x.TenantId == demoTenant.Id && x.Sku == "SP-001");
+            if (seededProduct is not null && seededProduct.CategoryId is null)
+            {
+                seededProduct.CategoryId = demoCategories["DRINK"].Id;
+                seededProduct.Brand ??= "Demo";
+                await dbContext.SaveChangesAsync();
+            }
+        }
+    }
+
+    private static async Task<Dictionary<string, ProductCategory>> EnsureDemoCategoriesAsync(
+        AppDbContext dbContext,
+        Guid tenantId)
+    {
+        var definitions = new[]
+        {
+            ("FOOD", "Thuc pham", "Food products"),
+            ("DRINK", "Do uong", "Beverages"),
+            ("HOUSEHOLD", "Gia dung", "Household products"),
+            ("OTHER", "Khac", "Other products")
+        };
+
+        var result = new Dictionary<string, ProductCategory>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (code, name, description) in definitions)
+        {
+            var category = await dbContext.ProductCategories.FirstOrDefaultAsync(
+                x => x.TenantId == tenantId && x.Code == code);
+            if (category is null)
+            {
+                category = new ProductCategory
+                {
+                    TenantId = tenantId,
+                    Code = code,
+                    Name = name,
+                    Description = description,
+                    IsActive = true
+                };
+                dbContext.ProductCategories.Add(category);
+                await dbContext.SaveChangesAsync();
+            }
+
+            result[code] = category;
+        }
+
+        return result;
     }
 
     private static async Task<AppUser> EnsureUserAsync(

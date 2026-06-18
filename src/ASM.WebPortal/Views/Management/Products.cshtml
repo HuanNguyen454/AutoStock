@@ -2,29 +2,42 @@
 @{
     ViewData["Title"] = "Products";
 }
+
 <section class="panel-card p-4 mb-4">
     <div class="dashboard-section-head">
         <div>
-            <div class="dashboard-section-title">Tìm vị trí sản phẩm</div>
-            <div class="dashboard-section-subtitle">Tra cứu theo SKU hoặc tên sản phẩm trong tenant hiện tại.</div>
+            <div class="dashboard-section-title">Product filters and location search</div>
+            <div class="dashboard-section-subtitle">Search by SKU, name, description, or category inside the current tenant.</div>
         </div>
     </div>
 
     <form asp-action="Products" method="get" class="row g-3 align-items-end">
-        <div class="col-lg-8">
-            <label class="form-label" for="product-location-keyword">Từ khóa</label>
+        <div class="col-lg-5">
+            <label class="form-label" for="product-location-keyword">Keyword</label>
             <input
                 id="product-location-keyword"
                 name="keyword"
                 value="@Model.Keyword"
                 class="form-control"
-                placeholder="Nhập SKU hoặc tên sản phẩm" />
+                placeholder="Enter SKU or product name" />
         </div>
-        <div class="col-lg-4 d-flex gap-2">
-            <button class="btn btn-dark flex-fill">Tìm vị trí</button>
+        <div class="col-lg-4">
+            <label class="form-label" for="product-category-filter">Category</label>
+            <select id="product-category-filter" name="categoryId" class="form-select">
+                <option value="">All categories</option>
+                @foreach (var category in Model.Categories)
+                {
+                    <option value="@category.Id" selected="@(Model.CategoryId == category.Id)">
+                        @category.Name (@category.Code)
+                    </option>
+                }
+            </select>
+        </div>
+        <div class="col-lg-3 d-flex gap-2">
+            <button class="btn btn-dark flex-fill">Filter</button>
             @if (Model.HasSearched)
             {
-                <a class="btn btn-outline-secondary" asp-action="Products">Xóa</a>
+                <a class="btn btn-outline-secondary" asp-action="Products">Clear</a>
             }
         </div>
     </form>
@@ -39,16 +52,19 @@
                         <thead>
                             <tr>
                                 <th>SKU</th>
-                                <th>Sản phẩm</th>
-                                <th>Số lượng</th>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Lot</th>
+                                <th>Expiry</th>
+                                <th>Qty</th>
                                 <th>Pallet</th>
-                                <th>Trạng thái</th>
-                                <th>Kho</th>
+                                <th>Status</th>
+                                <th>Warehouse</th>
                                 <th>Area</th>
                                 <th>Rack</th>
                                 <th>Slot</th>
-                                <th>Vị trí đầy đủ</th>
-                                <th>Ghi chú</th>
+                                <th>Full location</th>
+                                <th>Note</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -57,6 +73,9 @@
                                 <tr>
                                     <td><span class="fw-semibold">@item.Sku</span></td>
                                     <td>@item.ProductName</td>
+                                    <td>@(item.CategoryName ?? "-")</td>
+                                    <td>@(item.LotNumber ?? "-")</td>
+                                    <td>@(item.ExpiryDate?.ToString("yyyy-MM-dd") ?? "-")</td>
                                     <td>@(item.InventoryItemId.HasValue ? item.Quantity : "-")</td>
                                     <td>@(item.PalletCode ?? "-")</td>
                                     <td>@(item.PalletStatus ?? "-")</td>
@@ -83,7 +102,7 @@
             }
             else
             {
-                <div class="layout-empty-state">Không tìm thấy sản phẩm.</div>
+                <div class="layout-empty-state">No matching products were found.</div>
             }
         </div>
     }
@@ -91,10 +110,29 @@
 
 <div class="row g-4">
     <div class="col-lg-4">
+        <div class="panel-card p-4 mb-4">
+            <div class="dashboard-section-title mb-3">Add Category</div>
+            <form asp-action="CreateCategory" method="post" class="form-grid">
+                <input asp-for="CategoryCode" class="form-control" placeholder="Code" />
+                <input asp-for="CategoryName" class="form-control" placeholder="Name" />
+                <textarea asp-for="CategoryDescription" class="form-control" placeholder="Description"></textarea>
+                <button class="btn btn-outline-dark">Save Category</button>
+            </form>
+        </div>
+
         <div class="panel-card p-4">
+            <div class="dashboard-section-title mb-3">Add Product</div>
             <form asp-action="CreateProduct" method="post" class="form-grid">
                 <input asp-for="Sku" class="form-control" placeholder="SKU" />
                 <input asp-for="Name" class="form-control" placeholder="Name" />
+                <input asp-for="Brand" class="form-control" placeholder="Brand" />
+                <select asp-for="CategoryId" class="form-select">
+                    <option value="">Uncategorized</option>
+                    @foreach (var category in Model.Categories.Where(x => x.IsActive))
+                    {
+                        <option value="@category.Id">@category.Name (@category.Code)</option>
+                    }
+                </select>
                 <textarea asp-for="Description" class="form-control" placeholder="Description"></textarea>
                 <button class="btn btn-dark">Save Product</button>
             </form>
@@ -103,7 +141,14 @@
     <div class="col-lg-8">
         <div class="panel-card p-4">
             <table class="table align-middle">
-                <thead><tr><th>Product</th><th>Description</th><th>QR Preview</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>QR Preview</th>
+                    </tr>
+                </thead>
                 <tbody>
                 @foreach (var item in Model.Products)
                 {
@@ -112,6 +157,7 @@
                             <div class="fw-semibold">@item.Name</div>
                             <div class="small text-muted">@item.Sku</div>
                         </td>
+                        <td>@(item.CategoryName ?? "Uncategorized")</td>
                         <td>@item.Description</td>
                         <td>
                             @if (Model.QrCodes.TryGetValue(item.Id, out var qr))

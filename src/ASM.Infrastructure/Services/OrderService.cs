@@ -105,6 +105,8 @@ public class OrderService(
             ProductId = request.ProductId,
             PalletId = request.PalletId,
             TargetSlotId = request.TargetSlotId,
+            LotNumber = NormalizeLot(request.LotNumber),
+            ExpiryDate = request.ExpiryDate?.Date,
             Quantity = request.Quantity
         };
 
@@ -146,7 +148,12 @@ public class OrderService(
         var line = order.Lines.Single();
         var pallet = await dbContext.Pallets.Include(x => x.InventoryItems).FirstAsync(x => x.Id == line.PalletId, cancellationToken);
         var slot = await dbContext.Slots.FirstAsync(x => x.Id == line.TargetSlotId, cancellationToken);
-        var existingItem = pallet.InventoryItems.FirstOrDefault(x => x.ProductId == line.ProductId);
+        var lineLot = NormalizeLot(line.LotNumber);
+        var lineExpiry = line.ExpiryDate?.Date;
+        var existingItem = pallet.InventoryItems.FirstOrDefault(x =>
+            x.ProductId == line.ProductId &&
+            string.Equals(NormalizeLot(x.LotNumber), lineLot, StringComparison.OrdinalIgnoreCase) &&
+            x.ExpiryDate?.Date == lineExpiry);
 
         if (pallet.CurrentSlotId.HasValue && pallet.CurrentSlotId != slot.Id)
         {
@@ -168,6 +175,8 @@ public class OrderService(
                 TenantId = currentUser.TenantId,
                 ProductId = line.ProductId,
                 PalletId = pallet.Id,
+                LotNumber = lineLot,
+                ExpiryDate = lineExpiry,
                 Quantity = line.Quantity
             });
         }
@@ -260,7 +269,15 @@ public class OrderService(
             throw new InvalidOperationException("Pallet source does not belong to the selected slot.");
         }
 
-        var inventory = pallet.InventoryItems.FirstOrDefault(x => x.ProductId == request.ProductId)
+        var inventory = request.InventoryItemId.HasValue
+            ? pallet.InventoryItems.FirstOrDefault(x => x.Id == request.InventoryItemId.Value && x.ProductId == request.ProductId)
+            : pallet.InventoryItems
+                .Where(x => x.ProductId == request.ProductId && x.Quantity > 0)
+                .OrderBy(x => x.ExpiryDate ?? DateTime.MaxValue)
+                .ThenBy(x => x.CreatedAtUtc)
+                .FirstOrDefault();
+
+        inventory = inventory
             ?? throw new InvalidOperationException("Pallet khong co san pham can xuat.");
 
         if (inventory.Quantity < request.Quantity)
@@ -285,8 +302,11 @@ public class OrderService(
             TenantId = currentUser.TenantId,
             OutboundOrder = order,
             ProductId = request.ProductId,
+            InventoryItemId = inventory.Id,
             SourcePalletId = request.SourcePalletId,
             SourceSlotId = request.SourceSlotId,
+            LotNumber = inventory.LotNumber,
+            ExpiryDate = inventory.ExpiryDate,
             Quantity = request.Quantity
         };
 
@@ -329,7 +349,16 @@ public class OrderService(
         var pallet = await dbContext.Pallets
             .Include(x => x.InventoryItems)
             .FirstAsync(x => x.Id == line.SourcePalletId, cancellationToken);
-        var inventory = pallet.InventoryItems.FirstOrDefault(x => x.ProductId == line.ProductId)
+
+        var inventory = line.InventoryItemId.HasValue
+            ? pallet.InventoryItems.FirstOrDefault(x => x.Id == line.InventoryItemId.Value)
+            : pallet.InventoryItems
+                .Where(x => x.ProductId == line.ProductId && x.Quantity > 0)
+                .OrderBy(x => x.ExpiryDate ?? DateTime.MaxValue)
+                .ThenBy(x => x.CreatedAtUtc)
+                .FirstOrDefault();
+
+        inventory = inventory
             ?? throw new InvalidOperationException("Khong con ton kho tren pallet.");
 
         if (inventory.Quantity < line.Quantity)
@@ -756,6 +785,8 @@ public class OrderService(
                 line.TargetSlotId,
                 line.TargetSlot?.Name ?? string.Empty,
                 BuildSlotPath(order.Warehouse?.Name ?? string.Empty, line.TargetSlot),
+                line.LotNumber,
+                line.ExpiryDate,
                 line.Quantity)).ToList(),
             order.TaskAssignment?.Id);
 
@@ -773,12 +804,15 @@ public class OrderService(
                 line.Id,
                 line.ProductId,
                 line.Product?.Name ?? string.Empty,
+                line.InventoryItemId,
                 line.SourcePalletId,
                 line.SourcePallet?.Code ?? string.Empty,
                 BuildPalletLocationPath(order.Warehouse?.Name ?? string.Empty, line.SourcePallet),
                 line.SourceSlotId,
                 line.SourceSlot?.Name ?? string.Empty,
                 BuildSlotPath(order.Warehouse?.Name ?? string.Empty, line.SourceSlot),
+                line.LotNumber,
+                line.ExpiryDate,
                 line.Quantity)).ToList(),
             order.TaskAssignment?.Id);
 
@@ -842,6 +876,11 @@ public class OrderService(
             slot.Rack?.Name,
             slot.Name
         }.Where(static x => !string.IsNullOrWhiteSpace(x)));
+    }
+
+    private static string? NormalizeLot(string? lotNumber)
+    {
+        return string.IsNullOrWhiteSpace(lotNumber) ? null : lotNumber.Trim();
     }
 
     private sealed record StepExpectation(

@@ -91,13 +91,19 @@ public class LayoutPageViewModel
 public class ProductsPageViewModel
 {
     public IReadOnlyCollection<ProductDto> Products { get; set; } = [];
+    public IReadOnlyCollection<ProductCategoryDto> Categories { get; set; } = [];
     public IReadOnlyDictionary<Guid, QrCodeDto> QrCodes { get; set; } = new Dictionary<Guid, QrCodeDto>();
     public string? Keyword { get; set; }
+    public Guid? CategoryId { get; set; }
     public bool HasSearched { get; set; }
     public IReadOnlyList<ProductLocationSearchResultDto> LocationResults { get; set; } = [];
     public string Sku { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string? Brand { get; set; }
+    public string CategoryCode { get; set; } = string.Empty;
+    public string CategoryName { get; set; } = string.Empty;
+    public string? CategoryDescription { get; set; }
 }
 
 public class PalletsPageViewModel
@@ -141,6 +147,8 @@ public class InboundPageViewModel
     public Guid TargetSlotId { get; set; }
     public Guid AssignedToUserId { get; set; }
     public int Quantity { get; set; }
+    public string? LotNumber { get; set; }
+    public DateTime? ExpiryDate { get; set; }
     public string ReferenceCode { get; set; } = string.Empty;
 }
 

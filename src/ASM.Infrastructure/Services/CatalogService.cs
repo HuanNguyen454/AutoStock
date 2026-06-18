@@ -11,45 +11,180 @@ public class CatalogService(
     AppDbContext dbContext,
     ICurrentUserService currentUser) : ICatalogService
 {
-    public async Task<IReadOnlyCollection<ProductDto>> GetProductsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<ProductCategoryDto>> GetCategoriesAsync(CancellationToken cancellationToken)
     {
-        return await dbContext.Products
+        return await dbContext.ProductCategories
+            .AsNoTracking()
             .Where(x => x.TenantId == currentUser.TenantId)
             .OrderBy(x => x.Name)
-            .Select(x => new ProductDto(x.Id, x.Sku, x.Name, x.Description))
+            .Select(x => new ProductCategoryDto(x.Id, x.Code, x.Name, x.Description, x.IsActive))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<ProductCategoryDto> CreateCategoryAsync(CreateCategoryRequest request, CancellationToken cancellationToken)
+    {
+        var code = request.Code.Trim().ToUpperInvariant();
+        var name = request.Name.Trim();
+        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name))
+        {
+            throw new InvalidOperationException("Category code and name are required.");
+        }
+
+        var exists = await dbContext.ProductCategories.AnyAsync(
+            x => x.TenantId == currentUser.TenantId && x.Code == code,
+            cancellationToken);
+        if (exists)
+        {
+            throw new InvalidOperationException("Category code already exists.");
+        }
+
+        var category = new ProductCategory
+        {
+            TenantId = currentUser.TenantId,
+            Code = code,
+            Name = name,
+            Description = request.Description,
+            IsActive = true
+        };
+
+        dbContext.ProductCategories.Add(category);
+        await SaveAuditAsync("CreateCategory", nameof(ProductCategory), category.Id, category.Code, cancellationToken);
+        return MapCategory(category);
+    }
+
+    public async Task<ProductCategoryDto> UpdateCategoryAsync(UpdateCategoryRequest request, CancellationToken cancellationToken)
+    {
+        var category = await dbContext.ProductCategories.FirstOrDefaultAsync(
+            x => x.Id == request.Id && x.TenantId == currentUser.TenantId,
+            cancellationToken)
+            ?? throw new InvalidOperationException("Category was not found.");
+
+        var code = request.Code.Trim().ToUpperInvariant();
+        var name = request.Name.Trim();
+        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name))
+        {
+            throw new InvalidOperationException("Category code and name are required.");
+        }
+
+        var duplicated = await dbContext.ProductCategories.AnyAsync(
+            x => x.TenantId == currentUser.TenantId && x.Id != request.Id && x.Code == code,
+            cancellationToken);
+        if (duplicated)
+        {
+            throw new InvalidOperationException("Category code already exists.");
+        }
+
+        category.Code = code;
+        category.Name = name;
+        category.Description = request.Description;
+        category.IsActive = request.IsActive;
+        category.UpdatedAtUtc = DateTime.UtcNow;
+
+        await SaveAuditAsync("UpdateCategory", nameof(ProductCategory), category.Id, category.Code, cancellationToken);
+        return MapCategory(category);
+    }
+
+    public Task<IReadOnlyCollection<ProductDto>> GetProductsAsync(CancellationToken cancellationToken) =>
+        GetProductsAsync(null, null, cancellationToken);
+
+    public async Task<IReadOnlyCollection<ProductDto>> GetProductsAsync(
+        Guid? categoryId,
+        string? keyword,
+        CancellationToken cancellationToken)
+    {
+        var query = dbContext.Products
+            .AsNoTracking()
+            .Where(x => x.TenantId == currentUser.TenantId);
+
+        if (categoryId.HasValue)
+        {
+            query = query.Where(x => x.CategoryId == categoryId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var normalizedKeyword = keyword.Trim().ToLower();
+            query = query.Where(x =>
+                x.Sku.ToLower().Contains(normalizedKeyword) ||
+                x.Name.ToLower().Contains(normalizedKeyword) ||
+                (x.Description != null && x.Description.ToLower().Contains(normalizedKeyword)));
+        }
+
+        return await query
+            .OrderBy(x => x.Name)
+            .Select(x => new ProductDto(
+                x.Id,
+                x.Sku,
+                x.Name,
+                x.Description,
+                x.CategoryId,
+                x.Category == null ? null : x.Category.Name,
+                x.Brand))
             .ToListAsync(cancellationToken);
     }
 
     public async Task<ProductDto> CreateProductAsync(CreateProductRequest request, CancellationToken cancellationToken)
     {
+        var sku = request.Sku.Trim();
+        var name = request.Name.Trim();
+        if (string.IsNullOrWhiteSpace(sku) || string.IsNullOrWhiteSpace(name))
+        {
+            throw new InvalidOperationException("Product SKU and name are required.");
+        }
+
+        if (request.CategoryId.HasValue)
+        {
+            var categoryExists = await dbContext.ProductCategories.AnyAsync(
+                x => x.Id == request.CategoryId.Value && x.TenantId == currentUser.TenantId && x.IsActive,
+                cancellationToken);
+            if (!categoryExists)
+            {
+                throw new InvalidOperationException("Category was not found.");
+            }
+        }
+
         var product = new Product
         {
             TenantId = currentUser.TenantId,
-            Sku = request.Sku,
-            Name = request.Name,
-            Description = request.Description
+            CategoryId = request.CategoryId,
+            Sku = sku,
+            Name = name,
+            Description = request.Description,
+            Brand = request.Brand
         };
 
         dbContext.Products.Add(product);
         await SaveAuditAsync("CreateProduct", nameof(Product), product.Id, product.Name, cancellationToken);
-        return new ProductDto(product.Id, product.Sku, product.Name, product.Description);
+        return await ProjectProduct(product.Id, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<ProductLocationSearchResultDto>> SearchProductLocationsAsync(
+    public Task<IReadOnlyList<ProductLocationSearchResultDto>> SearchProductLocationsAsync(
         string keyword,
+        CancellationToken cancellationToken = default) =>
+        SearchProductLocationsAsync(keyword, null, cancellationToken);
+
+    public async Task<IReadOnlyList<ProductLocationSearchResultDto>> SearchProductLocationsAsync(
+        string? keyword,
+        Guid? categoryId,
         CancellationToken cancellationToken = default)
     {
-        var normalizedKeyword = keyword.Trim().ToLower();
-        if (string.IsNullOrWhiteSpace(normalizedKeyword))
+        var normalizedKeyword = keyword?.Trim().ToLower();
+        if (string.IsNullOrWhiteSpace(normalizedKeyword) && !categoryId.HasValue)
         {
             return [];
         }
 
         var rows = await (
             from product in dbContext.Products.AsNoTracking()
-            where product.TenantId == currentUser.TenantId &&
-                  (product.Sku.ToLower().Contains(normalizedKeyword) ||
-                   product.Name.ToLower().Contains(normalizedKeyword))
+            where product.TenantId == currentUser.TenantId
+            join category in dbContext.ProductCategories.AsNoTracking().Where(x => x.TenantId == currentUser.TenantId)
+                on product.CategoryId equals (Guid?)category.Id into categories
+            from category in categories.DefaultIfEmpty()
+            where (!categoryId.HasValue || product.CategoryId == categoryId.Value) &&
+                  (string.IsNullOrWhiteSpace(normalizedKeyword) ||
+                   product.Sku.ToLower().Contains(normalizedKeyword) ||
+                   product.Name.ToLower().Contains(normalizedKeyword) ||
+                   (product.Description != null && product.Description.ToLower().Contains(normalizedKeyword)))
             join inventory in dbContext.InventoryItems.AsNoTracking().Where(x => x.TenantId == currentUser.TenantId)
                 on product.Id equals inventory.ProductId into inventoryItems
             from inventory in inventoryItems.DefaultIfEmpty()
@@ -71,14 +206,20 @@ public class CatalogService(
             join warehouseFromPallet in dbContext.Warehouses.AsNoTracking().Where(x => x.TenantId == currentUser.TenantId)
                 on pallet == null ? null : (Guid?)pallet.WarehouseId equals (Guid?)warehouseFromPallet.Id into palletWarehouses
             from warehouseFromPallet in palletWarehouses.DefaultIfEmpty()
-            orderby product.Name, product.Sku, pallet == null ? string.Empty : pallet.Code
+            orderby inventory == null ? DateTime.MaxValue : inventory.ExpiryDate ?? DateTime.MaxValue,
+                product.Name,
+                product.Sku,
+                pallet == null ? string.Empty : pallet.Code
             select new
             {
                 ProductId = product.Id,
                 product.Sku,
                 ProductName = product.Name,
+                CategoryName = category == null ? null : category.Name,
                 InventoryItemId = inventory == null ? null : (Guid?)inventory.Id,
                 Quantity = inventory == null ? 0 : inventory.Quantity,
+                LotNumber = inventory == null ? null : inventory.LotNumber,
+                ExpiryDate = inventory == null ? null : inventory.ExpiryDate,
                 PalletId = pallet == null ? null : (Guid?)pallet.Id,
                 PalletCode = pallet == null ? null : pallet.Code,
                 PalletStatus = pallet == null ? null : (PalletStatus?)pallet.Status,
@@ -109,14 +250,17 @@ public class CatalogService(
                         ? "Ton kho chua gan pallet"
                         : row.SlotId is null
                             ? "Pallet chua duoc dat vao vi tri"
-                            : null;
+                            : BuildExpiryNote(row.ExpiryDate);
 
                 return new ProductLocationSearchResultDto(
                     row.ProductId,
                     row.Sku,
                     row.ProductName,
+                    row.CategoryName,
                     row.InventoryItemId,
                     row.Quantity,
+                    row.LotNumber,
+                    row.ExpiryDate,
                     row.PalletId,
                     row.PalletCode,
                     row.PalletStatus?.ToString(),
@@ -135,7 +279,7 @@ public class CatalogService(
     {
         var pallets = await dbContext.Pallets
             .Where(x => x.TenantId == currentUser.TenantId)
-            .Include(x => x.InventoryItems)
+            .Include(x => x.InventoryItems.OrderBy(i => i.ExpiryDate ?? DateTime.MaxValue))
             .ThenInclude(x => x.Product)
             .OrderBy(x => x.Code)
             .ToListAsync(cancellationToken);
@@ -151,14 +295,14 @@ public class CatalogService(
 
         if (!warehouseExists)
         {
-            throw new InvalidOperationException("Không tìm thấy kho.");
+            throw new InvalidOperationException("Khong tim thay kho.");
         }
 
         var pallet = new Pallet
         {
             TenantId = currentUser.TenantId,
             WarehouseId = request.WarehouseId,
-            Code = request.Code,
+            Code = request.Code.Trim(),
             Status = PalletStatus.Empty
         };
 
@@ -166,6 +310,25 @@ public class CatalogService(
         await SaveAuditAsync("CreatePallet", nameof(Pallet), pallet.Id, pallet.Code, cancellationToken);
         return MapPallet(pallet);
     }
+
+    private async Task<ProductDto> ProjectProduct(Guid productId, CancellationToken cancellationToken)
+    {
+        return await dbContext.Products
+            .AsNoTracking()
+            .Where(x => x.Id == productId && x.TenantId == currentUser.TenantId)
+            .Select(x => new ProductDto(
+                x.Id,
+                x.Sku,
+                x.Name,
+                x.Description,
+                x.CategoryId,
+                x.Category == null ? null : x.Category.Name,
+                x.Brand))
+            .FirstAsync(cancellationToken);
+    }
+
+    private static ProductCategoryDto MapCategory(ProductCategory category) =>
+        new(category.Id, category.Code, category.Name, category.Description, category.IsActive);
 
     private static PalletDto MapPallet(Pallet pallet) =>
         new(
@@ -178,7 +341,26 @@ public class CatalogService(
                 x.Id,
                 x.ProductId,
                 x.Product?.Name ?? string.Empty,
-                x.Quantity)).ToList());
+                x.Quantity,
+                x.LotNumber,
+                x.ExpiryDate)).ToList());
+
+    private static string? BuildExpiryNote(DateTime? expiryDate)
+    {
+        if (!expiryDate.HasValue)
+        {
+            return null;
+        }
+
+        var today = DateTime.UtcNow.Date;
+        var expiry = expiryDate.Value.Date;
+        if (expiry < today)
+        {
+            return "Da het han";
+        }
+
+        return expiry <= today.AddDays(30) ? "Sap het han" : null;
+    }
 
     private async Task SaveAuditAsync(string action, string entityName, Guid entityId, string detail, CancellationToken cancellationToken)
     {

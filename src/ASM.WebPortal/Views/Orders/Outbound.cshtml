@@ -127,6 +127,9 @@
                             <div>
                                 <div class="order-meta-label">Product</div>
                                 <div class="order-meta-value">@line?.ProductName x @line?.Quantity</div>
+                                <div class="small text-muted">
+                                    FEFO Lot: @(line?.LotNumber ?? "-") | Expiry: @(line?.ExpiryDate?.ToString("yyyy-MM-dd") ?? "-")
+                                </div>
                             </div>
                             <div>
                                 <div class="order-meta-label">Pallet</div>
