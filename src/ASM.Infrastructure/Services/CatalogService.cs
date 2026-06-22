@@ -289,6 +289,12 @@ public class CatalogService(
 
     public async Task<PalletDto> CreatePalletAsync(CreatePalletRequest request, CancellationToken cancellationToken)
     {
+        var code = request.Code.Trim();
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            throw new InvalidOperationException("Pallet code is required.");
+        }
+
         var warehouseExists = await dbContext.Warehouses.AnyAsync(
             x => x.Id == request.WarehouseId && x.TenantId == currentUser.TenantId,
             cancellationToken);
@@ -298,17 +304,225 @@ public class CatalogService(
             throw new InvalidOperationException("Khong tim thay kho.");
         }
 
+        var duplicated = await dbContext.Pallets.AnyAsync(
+            x => x.TenantId == currentUser.TenantId &&
+                 x.WarehouseId == request.WarehouseId &&
+                 x.Code == code,
+            cancellationToken);
+        if (duplicated)
+        {
+            throw new InvalidOperationException("Pallet code already exists in this warehouse.");
+        }
+
         var pallet = new Pallet
         {
             TenantId = currentUser.TenantId,
             WarehouseId = request.WarehouseId,
-            Code = request.Code.Trim(),
+            Code = code,
             Status = PalletStatus.Empty
         };
 
         dbContext.Pallets.Add(pallet);
         await SaveAuditAsync("CreatePallet", nameof(Pallet), pallet.Id, pallet.Code, cancellationToken);
         return MapPallet(pallet);
+    }
+
+    public async Task<PalletDto> UpdatePalletAsync(UpdatePalletRequest request, CancellationToken cancellationToken)
+    {
+        var pallet = await dbContext.Pallets
+            .Include(x => x.InventoryItems.OrderBy(i => i.ExpiryDate ?? DateTime.MaxValue))
+            .ThenInclude(x => x.Product)
+            .FirstOrDefaultAsync(x => x.Id == request.Id && x.TenantId == currentUser.TenantId, cancellationToken)
+            ?? throw new InvalidOperationException("Pallet was not found.");
+
+        var code = request.Code.Trim();
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            throw new InvalidOperationException("Pallet code is required.");
+        }
+
+        var duplicated = await dbContext.Pallets.AnyAsync(
+            x => x.TenantId == currentUser.TenantId &&
+                 x.WarehouseId == pallet.WarehouseId &&
+                 x.Id != pallet.Id &&
+                 x.Code == code,
+            cancellationToken);
+        if (duplicated)
+        {
+            throw new InvalidOperationException("Pallet code already exists in this warehouse.");
+        }
+
+        pallet.Code = code;
+        pallet.UpdatedAtUtc = DateTime.UtcNow;
+
+        await SaveAuditAsync("UpdatePallet", nameof(Pallet), pallet.Id, pallet.Code, cancellationToken);
+        return MapPallet(pallet);
+    }
+
+    public async Task DeletePalletAsync(Guid palletId, CancellationToken cancellationToken)
+    {
+        var pallet = await dbContext.Pallets.FirstOrDefaultAsync(
+            x => x.Id == palletId && x.TenantId == currentUser.TenantId,
+            cancellationToken) ?? throw new InvalidOperationException("Pallet was not found.");
+
+        var hasInventory = await dbContext.InventoryItems.AnyAsync(
+            x => x.PalletId == pallet.Id && x.TenantId == currentUser.TenantId,
+            cancellationToken);
+        var hasInboundLines = await dbContext.InboundOrderLines.AnyAsync(
+            x => x.PalletId == pallet.Id && x.TenantId == currentUser.TenantId,
+            cancellationToken);
+        var hasOutboundLines = await dbContext.OutboundOrderLines.AnyAsync(
+            x => x.SourcePalletId == pallet.Id && x.TenantId == currentUser.TenantId,
+            cancellationToken);
+        if (hasInventory || hasInboundLines || hasOutboundLines)
+        {
+            throw new InvalidOperationException("Cannot delete this pallet because it has inventory or order history.");
+        }
+
+        var qrCodes = await dbContext.QrCodes
+            .Where(x => x.TenantId == currentUser.TenantId &&
+                        x.TargetType == QrTargetType.Pallet &&
+                        x.TargetId == pallet.Id)
+            .ToListAsync(cancellationToken);
+
+        if (pallet.CurrentSlotId.HasValue)
+        {
+            var currentSlot = await dbContext.Slots.FirstOrDefaultAsync(
+                x => x.Id == pallet.CurrentSlotId.Value && x.TenantId == currentUser.TenantId,
+                cancellationToken);
+            if (currentSlot is not null)
+            {
+                var hasOtherPallets = await dbContext.Pallets.AnyAsync(
+                    x => x.TenantId == currentUser.TenantId &&
+                         x.CurrentSlotId == currentSlot.Id &&
+                         x.Id != pallet.Id,
+                    cancellationToken);
+                currentSlot.IsOccupied = hasOtherPallets;
+                currentSlot.UpdatedAtUtc = DateTime.UtcNow;
+            }
+        }
+
+        dbContext.QrCodes.RemoveRange(qrCodes);
+        dbContext.Pallets.Remove(pallet);
+        await SaveAuditAsync("DeletePallet", nameof(Pallet), pallet.Id, pallet.Code, cancellationToken);
+    }
+
+    public async Task AssignPalletToSlotAsync(AssignPalletSlotRequest request, CancellationToken cancellationToken)
+    {
+        var pallet = await dbContext.Pallets.FirstOrDefaultAsync(
+            x => x.Id == request.PalletId && x.TenantId == currentUser.TenantId,
+            cancellationToken) ?? throw new InvalidOperationException("Pallet was not found.");
+
+        var slot = await dbContext.Slots
+            .Include(x => x.Rack)
+            .ThenInclude(x => x!.Area)
+            .FirstOrDefaultAsync(x => x.Id == request.SlotId && x.TenantId == currentUser.TenantId, cancellationToken)
+            ?? throw new InvalidOperationException("Slot was not found.");
+
+        if (slot.Rack?.Area?.WarehouseId != pallet.WarehouseId)
+        {
+            throw new InvalidOperationException("Pallet and slot must belong to the same warehouse.");
+        }
+
+        var occupiedByAnotherPallet = await dbContext.Pallets.AnyAsync(
+            x => x.TenantId == currentUser.TenantId &&
+                 x.CurrentSlotId == slot.Id &&
+                 x.Id != pallet.Id,
+            cancellationToken);
+        if (occupiedByAnotherPallet)
+        {
+            throw new InvalidOperationException("Target slot already has another pallet.");
+        }
+
+        if (pallet.CurrentSlotId.HasValue && pallet.CurrentSlotId.Value != slot.Id)
+        {
+            var previousSlot = await dbContext.Slots.FirstOrDefaultAsync(
+                x => x.Id == pallet.CurrentSlotId.Value && x.TenantId == currentUser.TenantId,
+                cancellationToken);
+
+            if (previousSlot is not null)
+            {
+                var previousHasOtherPallets = await dbContext.Pallets.AnyAsync(
+                    x => x.TenantId == currentUser.TenantId &&
+                         x.CurrentSlotId == previousSlot.Id &&
+                         x.Id != pallet.Id,
+                    cancellationToken);
+                previousSlot.IsOccupied = previousHasOtherPallets;
+                previousSlot.UpdatedAtUtc = DateTime.UtcNow;
+            }
+        }
+
+        pallet.CurrentSlotId = slot.Id;
+        pallet.UpdatedAtUtc = DateTime.UtcNow;
+        slot.IsOccupied = true;
+        slot.UpdatedAtUtc = DateTime.UtcNow;
+
+        await SaveAuditAsync("AssignPalletToSlot", nameof(Pallet), pallet.Id, $"{pallet.Code} -> {slot.Name}", cancellationToken);
+    }
+
+    public async Task<PalletDto> AddInitialInventoryAsync(AddInitialInventoryRequest request, CancellationToken cancellationToken)
+    {
+        if (request.Quantity <= 0)
+        {
+            throw new InvalidOperationException("Quantity must be greater than zero.");
+        }
+
+        var pallet = await dbContext.Pallets
+            .Include(x => x.InventoryItems)
+            .ThenInclude(x => x.Product)
+            .FirstOrDefaultAsync(x => x.Id == request.PalletId && x.TenantId == currentUser.TenantId, cancellationToken)
+            ?? throw new InvalidOperationException("Pallet was not found.");
+
+        if (!pallet.CurrentSlotId.HasValue)
+        {
+            throw new InvalidOperationException("Place this pallet into a slot before adding initial stock.");
+        }
+
+        var productExists = await dbContext.Products.AnyAsync(
+            x => x.Id == request.ProductId && x.TenantId == currentUser.TenantId,
+            cancellationToken);
+        if (!productExists)
+        {
+            throw new InvalidOperationException("Product was not found.");
+        }
+
+        var lotNumber = NormalizeOptional(request.LotNumber);
+        var expiryDate = request.ExpiryDate?.Date;
+        var existingItem = pallet.InventoryItems.FirstOrDefault(x =>
+            x.ProductId == request.ProductId &&
+            string.Equals(NormalizeOptional(x.LotNumber), lotNumber, StringComparison.OrdinalIgnoreCase) &&
+            x.ExpiryDate?.Date == expiryDate);
+
+        if (existingItem is null)
+        {
+            dbContext.InventoryItems.Add(new InventoryItem
+            {
+                TenantId = currentUser.TenantId,
+                PalletId = pallet.Id,
+                ProductId = request.ProductId,
+                Quantity = request.Quantity,
+                LotNumber = lotNumber,
+                ExpiryDate = expiryDate
+            });
+        }
+        else
+        {
+            existingItem.Quantity += request.Quantity;
+            existingItem.UpdatedAtUtc = DateTime.UtcNow;
+        }
+
+        pallet.Status = PalletStatus.Occupied;
+        pallet.UpdatedAtUtc = DateTime.UtcNow;
+
+        await SaveAuditAsync("AddInitialInventory", nameof(Pallet), pallet.Id, $"{pallet.Code} qty {request.Quantity}", cancellationToken);
+
+        var updatedPallet = await dbContext.Pallets
+            .AsNoTracking()
+            .Include(x => x.InventoryItems.OrderBy(i => i.ExpiryDate ?? DateTime.MaxValue))
+            .ThenInclude(x => x.Product)
+            .FirstAsync(x => x.Id == pallet.Id && x.TenantId == currentUser.TenantId, cancellationToken);
+
+        return MapPallet(updatedPallet);
     }
 
     private async Task<ProductDto> ProjectProduct(Guid productId, CancellationToken cancellationToken)
@@ -329,6 +543,12 @@ public class CatalogService(
 
     private static ProductCategoryDto MapCategory(ProductCategory category) =>
         new(category.Id, category.Code, category.Name, category.Description, category.IsActive);
+
+    private static string? NormalizeOptional(string? value)
+    {
+        var normalized = value?.Trim();
+        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
+    }
 
     private static PalletDto MapPallet(Pallet pallet) =>
         new(

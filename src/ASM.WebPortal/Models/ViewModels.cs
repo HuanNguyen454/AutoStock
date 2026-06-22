@@ -128,6 +128,7 @@ public class LayoutPageViewModel
     public IReadOnlyCollection<WarehouseDto> Warehouses { get; set; } = [];
     public WarehouseLayoutDto? Layout { get; set; }
     public IReadOnlyCollection<PalletDto> Pallets { get; set; } = [];
+    public IReadOnlyCollection<ProductDto> Products { get; set; } = [];
     public IReadOnlyDictionary<Guid, QrCodeDto> QrCodes { get; set; } = new Dictionary<Guid, QrCodeDto>();
     public Guid SelectedWarehouseId { get; set; }
     public string AreaName { get; set; } = string.Empty;
@@ -136,6 +137,11 @@ public class LayoutPageViewModel
     public Guid RackId { get; set; }
     public string SlotName { get; set; } = string.Empty;
     public string PalletCode { get; set; } = string.Empty;
+    public Guid ProductId { get; set; }
+    public Guid InventoryPalletId { get; set; }
+    public int Quantity { get; set; }
+    public string? LotNumber { get; set; }
+    public DateTime? ExpiryDate { get; set; }
 }
 
 public class ProductsPageViewModel

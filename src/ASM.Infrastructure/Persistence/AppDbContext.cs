@@ -41,7 +41,7 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
         builder.Entity<Product>().HasIndex(x => x.CategoryId);
         builder.Entity<InventoryItem>().HasIndex(x => new { x.TenantId, x.ProductId, x.ExpiryDate });
         builder.Entity<InventoryItem>().HasIndex(x => x.ExpiryDate);
-        builder.Entity<Pallet>().HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
+        builder.Entity<Pallet>().HasIndex(x => new { x.TenantId, x.WarehouseId, x.Code }).IsUnique();
         builder.Entity<QrCode>().HasIndex(x => new { x.TenantId, x.Payload }).IsUnique();
         builder.Entity<RefreshToken>().HasIndex(x => x.Token).IsUnique();
 
