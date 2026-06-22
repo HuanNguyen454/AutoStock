@@ -1,6 +1,15 @@
 @model PalletsPageViewModel
 @{
     ViewData["Title"] = "Pallets";
+    var warehouseNames = Model.Warehouses.ToDictionary(x => x.Id, x => x.Name);
+}
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-danger">@errorMessage</div>
 }
 <div class="row g-4">
     <div class="col-lg-4">
@@ -20,15 +29,17 @@
     <div class="col-lg-8">
         <div class="panel-card p-4">
             <table class="table align-middle">
-                <thead><tr><th>Pallet</th><th>Status</th><th>Slot</th><th>Inventory</th><th>QR Preview</th></tr></thead>
+                <thead><tr><th>Pallet</th><th>Warehouse</th><th>Status</th><th>Slot</th><th>Inventory</th><th>QR Preview</th><th>Actions</th></tr></thead>
                 <tbody>
                 @foreach (var pallet in Model.Pallets)
                 {
+                    var canRequestDelete = !pallet.InventoryItems.Any();
                     <tr>
                         <td>
                             <div class="fw-semibold">@pallet.Code</div>
                             <div class="small text-muted">Ready for scan demo</div>
                         </td>
+                        <td>@(warehouseNames.GetValueOrDefault(pallet.WarehouseId) ?? "-")</td>
                         <td>@pallet.Status</td>
                         <td>@(pallet.CurrentSlotId?.ToString() ?? "-")</td>
                         <td>@string.Join(", ", pallet.InventoryItems.Select(x => $"{x.ProductName}: {x.Quantity}"))</td>
@@ -41,6 +52,23 @@
                                 </div>
                             }
                         </td>
+                        <td>
+                            <div class="slot-edit-stack">
+                                <button class="btn btn-sm btn-dark w-100" type="button" data-bs-toggle="modal" data-bs-target="#editPalletModal-@pallet.Id">
+                                    Edit Pallet
+                                </button>
+                                <form asp-action="DeletePallet" method="post" onsubmit="return confirm('Delete this pallet?');">
+                                    <input type="hidden" name="palletId" value="@pallet.Id" />
+                                    <button class="btn btn-sm btn-outline-danger w-100" disabled="@(!canRequestDelete)">
+                                        Delete Pallet
+                                    </button>
+                                </form>
+                                @if (!canRequestDelete)
+                                {
+                                    <div class="small text-muted">Delete is available only before inventory or order history exists.</div>
+                                }
+                            </div>
+                        </td>
                     </tr>
                 }
                 </tbody>
@@ -48,3 +76,29 @@
         </div>
     </div>
 </div>
+
+@foreach (var pallet in Model.Pallets)
+{
+    <div class="modal fade" id="editPalletModal-@pallet.Id" tabindex="-1" aria-labelledby="editPalletModalLabel-@pallet.Id" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form asp-action="UpdatePallet" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editPalletModalLabel-@pallet.Id">Edit Pallet</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="palletId" value="@pallet.Id" />
+                        <label class="form-label">Pallet code</label>
+                        <input name="code" class="form-control form-control-lg" value="@pallet.Code" aria-label="Pallet code" />
+                        <div class="form-text">The code must be unique inside @(warehouseNames.GetValueOrDefault(pallet.WarehouseId) ?? "this warehouse").</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-dark">Save Pallet</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}

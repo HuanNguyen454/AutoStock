@@ -32,6 +32,17 @@ public record PalletDto(
 
 public record CreatePalletRequest(Guid WarehouseId, string Code);
 
+public record UpdatePalletRequest(Guid Id, string Code);
+
+public record AssignPalletSlotRequest(Guid PalletId, Guid SlotId);
+
+public record AddInitialInventoryRequest(
+    Guid PalletId,
+    Guid ProductId,
+    int Quantity,
+    string? LotNumber,
+    DateTime? ExpiryDate);
+
 public record InventoryItemDto(
     Guid Id,
     Guid ProductId,

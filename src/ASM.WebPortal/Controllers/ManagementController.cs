@@ -98,6 +98,7 @@ public class ManagementController(
         IReadOnlyCollection<PalletDto> pallets = selectedId == Guid.Empty
             ? Array.Empty<PalletDto>()
             : (await catalogService.GetPalletsAsync(cancellationToken)).Where(x => x.WarehouseId == selectedId).ToList();
+        var products = await catalogService.GetProductsAsync(cancellationToken);
         var qrCodes = new Dictionary<Guid, QrCodeDto>();
 
         if (layout is not null)
@@ -146,6 +147,7 @@ public class ManagementController(
             SelectedWarehouseId = selectedId,
             Layout = layout,
             Pallets = pallets,
+            Products = products,
             QrCodes = qrCodes
         });
     }
@@ -322,12 +324,21 @@ public class ManagementController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddPallet(LayoutPageViewModel model, CancellationToken cancellationToken)
     {
-        var created = await catalogService.CreatePalletAsync(
-            new CreatePalletRequest(model.SelectedWarehouseId, model.PalletCode),
-            cancellationToken);
-        await qrService.GenerateAsync(
-            new CreateQrRequest(QrTargetType.Pallet, created.Id, $"Pallet - {created.Code}"),
-            cancellationToken);
+        try
+        {
+            var created = await catalogService.CreatePalletAsync(
+                new CreatePalletRequest(model.SelectedWarehouseId, model.PalletCode),
+                cancellationToken);
+            await qrService.GenerateAsync(
+                new CreateQrRequest(QrTargetType.Pallet, created.Id, $"Pallet - {created.Code}"),
+                cancellationToken);
+            TempData["SuccessMessage"] = "Pallet created.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
         return RedirectToAction(nameof(Layout), new { warehouseId = model.SelectedWarehouseId });
     }
 
@@ -523,13 +534,109 @@ public class ManagementController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreatePallet(PalletsPageViewModel model, CancellationToken cancellationToken)
     {
-        var created = await catalogService.CreatePalletAsync(
-            new CreatePalletRequest(model.WarehouseId, model.Code),
-            cancellationToken);
-        await qrService.GenerateAsync(
-            new CreateQrRequest(QrTargetType.Pallet, created.Id, $"Pallet - {created.Code}"),
-            cancellationToken);
+        try
+        {
+            var created = await catalogService.CreatePalletAsync(
+                new CreatePalletRequest(model.WarehouseId, model.Code),
+                cancellationToken);
+            await qrService.GenerateAsync(
+                new CreateQrRequest(QrTargetType.Pallet, created.Id, $"Pallet - {created.Code}"),
+                cancellationToken);
+            TempData["SuccessMessage"] = "Pallet created.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
         return RedirectToAction(nameof(Pallets));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdatePallet(Guid palletId, string code, Guid? selectedWarehouseId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await catalogService.UpdatePalletAsync(new UpdatePalletRequest(palletId, code), cancellationToken);
+            TempData["SuccessMessage"] = "Pallet updated.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        if (selectedWarehouseId.HasValue)
+        {
+            return RedirectToAction(nameof(Layout), new { warehouseId = selectedWarehouseId.Value });
+        }
+
+        return RedirectToAction(nameof(Pallets));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeletePallet(Guid palletId, Guid? selectedWarehouseId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await catalogService.DeletePalletAsync(palletId, cancellationToken);
+            TempData["SuccessMessage"] = "Pallet deleted.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        if (selectedWarehouseId.HasValue)
+        {
+            return RedirectToAction(nameof(Layout), new { warehouseId = selectedWarehouseId.Value });
+        }
+
+        return RedirectToAction(nameof(Pallets));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AssignPalletSlot(Guid selectedWarehouseId, Guid palletId, Guid slotId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await catalogService.AssignPalletToSlotAsync(new AssignPalletSlotRequest(palletId, slotId), cancellationToken);
+            TempData["SuccessMessage"] = "Pallet location updated.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Layout), new { warehouseId = selectedWarehouseId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddInitialInventory(
+        Guid selectedWarehouseId,
+        Guid palletId,
+        Guid productId,
+        int quantity,
+        string? lotNumber,
+        DateTime? expiryDate,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await catalogService.AddInitialInventoryAsync(
+                new AddInitialInventoryRequest(palletId, productId, quantity, lotNumber, expiryDate),
+                cancellationToken);
+            TempData["SuccessMessage"] = "Initial stock added to pallet.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Layout), new { warehouseId = selectedWarehouseId });
     }
 
     public async Task<IActionResult> Users(CancellationToken cancellationToken)
