@@ -5,6 +5,19 @@
     var areaCount = Model.Layout?.Areas.Count ?? 0;
     var rackCount = Model.Layout?.Areas.SelectMany(x => x.Racks).Count() ?? 0;
     var slotCount = Model.Layout?.Areas.SelectMany(x => x.Racks).SelectMany(x => x.Slots).Count() ?? 0;
+    var slotOptions = Model.Layout?.Areas
+        .SelectMany(area => area.Racks.SelectMany(rack => rack.Slots.Select(slot => new
+        {
+            Slot = slot,
+            Path = $"{area.Name} > {rack.Name} > {slot.Name}"
+        })))
+        .OrderBy(x => x.Path)
+        .ToList() ?? [];
+    var slotPathLookup = slotOptions.ToDictionary(x => x.Slot.Id, x => x.Path);
+    var placedPallets = Model.Pallets
+        .Where(x => x.CurrentSlotId.HasValue)
+        .OrderBy(x => x.Code)
+        .ToList();
 }
 
 @if (TempData["SuccessMessage"] is string successMessage)
@@ -114,6 +127,66 @@
                         <input type="hidden" asp-for="SelectedWarehouseId" />
                         <input asp-for="PalletCode" class="form-control" placeholder="Pallet code" />
                         <button class="btn btn-dark">Add Pallet</button>
+                    </form>
+                </section>
+
+                <section class="layout-form-card">
+                    <div class="layout-form-title">5. Set Pallet Location</div>
+                    <form asp-action="AssignPalletSlot" method="post" class="form-grid">
+                        <input type="hidden" asp-for="SelectedWarehouseId" />
+                        <select name="palletId" class="form-select" aria-label="Pallet">
+                            @foreach (var pallet in Model.Pallets.OrderBy(x => x.Code))
+                            {
+                                var currentPath = pallet.CurrentSlotId.HasValue && slotPathLookup.TryGetValue(pallet.CurrentSlotId.Value, out var path)
+                                    ? path
+                                    : "No slot assigned";
+                                <option value="@pallet.Id">@pallet.Code - @currentPath</option>
+                            }
+                        </select>
+                        <select name="slotId" class="form-select" aria-label="Target slot">
+                            @foreach (var option in slotOptions)
+                            {
+                                <option value="@option.Slot.Id" disabled="@option.Slot.IsOccupied">
+                                    @option.Path @(option.Slot.IsOccupied ? "(occupied)" : string.Empty)
+                                </option>
+                            }
+                        </select>
+                        <button class="btn btn-dark" disabled="@(!Model.Pallets.Any() || !slotOptions.Any(x => !x.Slot.IsOccupied))">Place Pallet</button>
+                        <div class="small text-muted">Use this before go-live to map existing pallets into Area / Rack / Slot.</div>
+                    </form>
+                </section>
+
+                <section class="layout-form-card">
+                    <div class="layout-form-title">6. Add Initial Stock</div>
+                    <form asp-action="AddInitialInventory" method="post" class="form-grid">
+                        <input type="hidden" asp-for="SelectedWarehouseId" />
+                        <select name="palletId" class="form-select" aria-label="Pallet with location">
+                            @foreach (var pallet in placedPallets)
+                            {
+                                var currentPath = pallet.CurrentSlotId.HasValue && slotPathLookup.TryGetValue(pallet.CurrentSlotId.Value, out var path)
+                                    ? path
+                                    : "No slot assigned";
+                                <option value="@pallet.Id">@pallet.Code - @currentPath</option>
+                            }
+                        </select>
+                        <select name="productId" class="form-select" aria-label="Product">
+                            @foreach (var product in Model.Products.OrderBy(x => x.Name))
+                            {
+                                <option value="@product.Id">@product.Sku - @product.Name</option>
+                            }
+                        </select>
+                        <input name="quantity" class="form-control" type="number" min="1" placeholder="Quantity" />
+                        <input name="lotNumber" class="form-control" placeholder="Lot number, optional" />
+                        <input name="expiryDate" class="form-control" type="date" />
+                        <button class="btn btn-dark" disabled="@(!placedPallets.Any() || !Model.Products.Any())">Add Stock To Pallet</button>
+                        @if (!Model.Products.Any())
+                        {
+                            <a class="small" asp-controller="Management" asp-action="Products">Create products before adding stock.</a>
+                        }
+                        else
+                        {
+                            <div class="small text-muted">Use this for real stock that already exists before the system goes live.</div>
+                        }
                     </form>
                 </section>
             </div>
@@ -283,16 +356,22 @@
                     </div>
                     <div class="table-responsive">
                         <table class="table align-middle">
-                            <thead><tr><th>Pallet</th><th>Status</th><th>QR Preview</th></tr></thead>
+                            <thead><tr><th>Pallet</th><th>Status</th><th>Location</th><th>Inventory</th><th>QR Preview</th><th>Actions</th></tr></thead>
                             <tbody>
                             @foreach (var pallet in Model.Pallets)
                             {
+                                var canRequestDelete = !pallet.InventoryItems.Any();
+                                var location = pallet.CurrentSlotId.HasValue && slotPathLookup.TryGetValue(pallet.CurrentSlotId.Value, out var path)
+                                    ? path
+                                    : "No slot assigned";
                                 <tr>
                                     <td>
                                         <div class="fw-semibold">@pallet.Code</div>
                                         <div class="small text-muted">Warehouse pallet label</div>
                                     </td>
                                     <td>@pallet.Status</td>
+                                    <td>@location</td>
+                                    <td>@string.Join(", ", pallet.InventoryItems.Select(x => $"{x.ProductName}: {x.Quantity}"))</td>
                                     <td>
                                         @if (Model.QrCodes.TryGetValue(pallet.Id, out var palletQr))
                                         {
@@ -301,6 +380,24 @@
                                                 <a class="btn btn-sm btn-outline-dark w-100" asp-action="DownloadQr" asp-controller="Management" asp-route-qrId="@palletQr.Id">Download Pallet QR</a>
                                             </div>
                                         }
+                                    </td>
+                                    <td>
+                                        <div class="slot-edit-stack">
+                                            <button class="btn btn-sm btn-dark w-100" type="button" data-bs-toggle="modal" data-bs-target="#editLayoutPalletModal-@pallet.Id">
+                                                Edit Pallet
+                                            </button>
+                                            <form asp-action="DeletePallet" method="post" onsubmit="return confirm('Delete this pallet?');">
+                                                <input type="hidden" name="selectedWarehouseId" value="@Model.SelectedWarehouseId" />
+                                                <input type="hidden" name="palletId" value="@pallet.Id" />
+                                                <button class="btn btn-sm btn-outline-danger w-100" disabled="@(!canRequestDelete)">
+                                                    Delete Pallet
+                                                </button>
+                                            </form>
+                                            @if (!canRequestDelete)
+                                            {
+                                                <div class="small text-muted">Delete is available only before inventory or order history exists.</div>
+                                            }
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -312,3 +409,30 @@
         </div>
     </div>
 </div>
+
+@foreach (var pallet in Model.Pallets)
+{
+    <div class="modal fade" id="editLayoutPalletModal-@pallet.Id" tabindex="-1" aria-labelledby="editLayoutPalletModalLabel-@pallet.Id" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form asp-action="UpdatePallet" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editLayoutPalletModalLabel-@pallet.Id">Edit Pallet</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="selectedWarehouseId" value="@Model.SelectedWarehouseId" />
+                        <input type="hidden" name="palletId" value="@pallet.Id" />
+                        <label class="form-label">Pallet code</label>
+                        <input name="code" class="form-control form-control-lg" value="@pallet.Code" aria-label="Pallet code" />
+                        <div class="form-text">The code must be unique inside this warehouse.</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-dark">Save Pallet</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}

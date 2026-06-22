@@ -55,6 +55,10 @@ public interface ICatalogService
     Task<ProductDto> CreateProductAsync(CreateProductRequest request, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<PalletDto>> GetPalletsAsync(CancellationToken cancellationToken);
     Task<PalletDto> CreatePalletAsync(CreatePalletRequest request, CancellationToken cancellationToken);
+    Task<PalletDto> UpdatePalletAsync(UpdatePalletRequest request, CancellationToken cancellationToken);
+    Task DeletePalletAsync(Guid palletId, CancellationToken cancellationToken);
+    Task AssignPalletToSlotAsync(AssignPalletSlotRequest request, CancellationToken cancellationToken);
+    Task<PalletDto> AddInitialInventoryAsync(AddInitialInventoryRequest request, CancellationToken cancellationToken);
     Task<IReadOnlyList<ProductLocationSearchResultDto>> SearchProductLocationsAsync(
         string keyword,
         CancellationToken cancellationToken = default);
