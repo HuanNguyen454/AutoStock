@@ -73,6 +73,7 @@ public interface IQrService
     Task<QrCodeDto> GenerateAsync(CreateQrRequest request, CancellationToken cancellationToken);
     Task<QrCodeDto?> GetAsync(Guid qrId, CancellationToken cancellationToken);
     Task<byte[]> RenderPngAsync(Guid qrId, CancellationToken cancellationToken);
+    Task<QrLookupResultDto> LookupAsync(string payload, CancellationToken cancellationToken);
 }
 
 public interface IOrderService

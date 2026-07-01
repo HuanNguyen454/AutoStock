@@ -1,5 +1,6 @@
 using ASM.Domain.Entities;
 using ASM.Domain.Constants;
+using ASM.Infrastructure.Persistence;
 using ASM.WebPortal.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -9,7 +10,7 @@ using System.Security.Claims;
 
 namespace ASM.WebPortal.Controllers;
 
-public class AccountController(UserManager<AppUser> userManager) : Controller
+public class AccountController(UserManager<AppUser> userManager, AppDbContext dbContext) : Controller
 {
     [HttpGet]
     public IActionResult Login(string? returnUrl = null, bool expired = false) => View(new LoginViewModel
@@ -58,6 +59,17 @@ public class AccountController(UserManager<AppUser> userManager) : Controller
                 new("full_name", user.FullName),
                 new("tenant_id", user.TenantId.ToString())
             };
+
+            dbContext.AuditLogs.Add(new AuditLog
+            {
+                TenantId = user.TenantId,
+                PerformedByUserId = user.Id,
+                Action = "Login",
+                EntityName = nameof(AppUser),
+                EntityId = user.Id,
+                Detail = $"Successful web login by {user.UserName}"
+            });
+            await dbContext.SaveChangesAsync(cancellationToken);
 
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
