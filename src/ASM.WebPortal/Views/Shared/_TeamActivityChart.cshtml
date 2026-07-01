@@ -1,0 +1,55 @@
+@using System.Linq
+@model TeamActivityChartDto
+@{
+    var maxDailyActivity = Math.Max(1, Model.Points.Select(x => x.ManagerActions + x.StaffActions).DefaultIfEmpty(0).Max());
+    var totalActivity = Model.ManagerActionCount + Model.StaffActionCount;
+    var chartMinWidth = Math.Max(560, Model.Points.Count * 38);
+}
+
+<div class="team-activity-overview">
+    <div class="team-activity-stat manager">
+        <span>Manager</span>
+        <strong>@Model.ManagerActionCount</strong>
+        <small>@Model.ManagerMemberCount member(s)</small>
+    </div>
+    <div class="team-activity-stat staff">
+        <span>Staff</span>
+        <strong>@Model.StaffActionCount</strong>
+        <small>@Model.StaffMemberCount member(s)</small>
+    </div>
+    <div class="team-activity-stat total">
+        <span>Total activity</span>
+        <strong>@totalActivity</strong>
+        <small>Last @Model.Days days</small>
+    </div>
+</div>
+
+<div class="team-activity-legend">
+    <span><i class="manager"></i>Manager actions</span>
+    <span><i class="staff"></i>Staff actions and scans</span>
+</div>
+
+<div class="team-activity-scroll">
+    <div class="team-activity-chart" style="min-width: @(chartMinWidth)px; grid-template-columns: repeat(@Model.Points.Count, minmax(30px, 1fr));">
+        @for (var index = 0; index < Model.Points.Count; index++)
+        {
+            var point = Model.Points.ElementAt(index);
+            var managerHeight = point.ManagerActions == 0 ? 0 : Math.Max(2, point.ManagerActions * 100 / maxDailyActivity);
+            var staffHeight = point.StaffActions == 0 ? 0 : Math.Max(2, point.StaffActions * 100 / maxDailyActivity);
+            var showLabel = Model.Days == 7 || index == 0 || index == Model.Points.Count - 1 || index % 5 == 0;
+            <div class="team-activity-column" title="@point.Label: Manager @point.ManagerActions, Staff @point.StaffActions">
+                <div class="team-activity-value">@(point.ManagerActions + point.StaffActions)</div>
+                <div class="team-activity-track">
+                    <div class="team-activity-segment manager" style="height: @managerHeight%"></div>
+                    <div class="team-activity-segment staff" style="height: @staffHeight%"></div>
+                </div>
+                <div class="team-activity-label @(showLabel ? string.Empty : "muted")">@(showLabel ? point.Label : "")</div>
+            </div>
+        }
+    </div>
+</div>
+
+@if (totalActivity == 0)
+{
+    <div class="dashboard-empty-state mt-3">No Manager or Staff activity was recorded during this period.</div>
+}

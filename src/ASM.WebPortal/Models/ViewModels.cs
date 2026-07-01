@@ -23,6 +23,7 @@ public class DashboardPageViewModel
     public IReadOnlyCollection<InboundOrderDto> InboundOrders { get; set; } = [];
     public IReadOnlyCollection<OutboundOrderDto> OutboundOrders { get; set; } = [];
     public IReadOnlyCollection<DashboardWarehouseMapViewModel> WarehouseMaps { get; set; } = [];
+    public TeamActivityChartDto? TeamActivity { get; set; }
 }
 
 public class DashboardWarehouseMapViewModel
@@ -78,6 +79,9 @@ public class AdminDashboardPageViewModel
 {
     public AdminDashboardSummaryDto Summary { get; set; } = new(0, 0, 0, 0, 0, 0, [], [], []);
     public IReadOnlyCollection<OwnerUsageSummaryDto> Owners { get; set; } = [];
+    public IReadOnlyCollection<OwnerUsageSummaryDto> OwnerOptions { get; set; } = [];
+    public Guid? SelectedOwnerId { get; set; }
+    public TeamActivityChartDto? TeamActivity { get; set; }
 }
 
 public class AdminOwnersPageViewModel

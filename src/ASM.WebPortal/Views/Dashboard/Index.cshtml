@@ -97,6 +97,47 @@
     </article>
 </section>
 
+@if (Model.TeamActivity is { } teamActivity)
+{
+    <section class="panel-card team-activity-panel p-4 mb-4">
+        <div class="dashboard-section-head">
+            <div>
+                <div class="dashboard-section-title">Manager and Staff Activity</div>
+                <div class="dashboard-section-subtitle">Daily operational actions for @teamActivity.TenantName / @teamActivity.WarehouseName, grouped by team role.</div>
+            </div>
+            <form asp-action="Index" method="get" class="team-activity-filter">
+                <label for="ownerTeamWarehouseId">Warehouse</label>
+                <select id="ownerTeamWarehouseId" name="warehouseId" class="form-select form-select-sm">
+                    @if (teamActivity.WarehouseId is null)
+                    {
+                        <option value="" selected>All warehouses</option>
+                    }
+                    else
+                    {
+                        <option value="">All warehouses</option>
+                    }
+                    @foreach (var warehouse in teamActivity.Warehouses)
+                    {
+                        if (warehouse.Id == teamActivity.WarehouseId)
+                        {
+                            <option value="@warehouse.Id" selected>@warehouse.Name (@warehouse.Code)</option>
+                        }
+                        else
+                        {
+                            <option value="@warehouse.Id">@warehouse.Name (@warehouse.Code)</option>
+                        }
+                    }
+                </select>
+                <div class="team-activity-period" role="group" aria-label="Team activity period">
+                    <button type="submit" name="days" value="7" class="@(teamActivity.Days == 7 ? "active" : string.Empty)">7 days</button>
+                    <button type="submit" name="days" value="30" class="@(teamActivity.Days == 30 ? "active" : string.Empty)">30 days</button>
+                </div>
+            </form>
+        </div>
+        <partial name="_TeamActivityChart" model="teamActivity" />
+    </section>
+}
+
 @if (Model.WarehouseMaps.Any())
 {
     <section class="dashboard-map-section mb-4">
