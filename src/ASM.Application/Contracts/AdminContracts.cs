@@ -7,7 +7,15 @@ public record AdminDashboardSummaryDto(
     int TotalAuditEventsLast7Days,
     int TotalOrdersLast7Days,
     int TotalScansLast7Days,
+    IReadOnlyCollection<OwnerAccessSummaryDto> OwnerAccessLast7Days,
+    IReadOnlyCollection<OwnerAccessSummaryDto> OwnerAccessLast30Days,
     IReadOnlyCollection<AlertDto> Alerts);
+
+public record OwnerAccessSummaryDto(
+    Guid OwnerUserId,
+    string OwnerFullName,
+    string TenantName,
+    int AccessCount);
 
 public record OwnerUsageSummaryDto(
     Guid OwnerUserId,

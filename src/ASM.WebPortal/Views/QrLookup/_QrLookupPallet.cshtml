@@ -1,0 +1,39 @@
+@model QrLookupPalletDto
+
+<article class="qr-pallet-card">
+    <div class="qr-pallet-head">
+        <div>
+            <span>Pallet</span>
+            <strong>@Model.Code</strong>
+        </div>
+        <span class="qr-pallet-status">@Model.Status</span>
+    </div>
+
+    @if (Model.InventoryItems.Count == 0)
+    {
+        <div class="qr-pallet-empty">No products are currently recorded on this pallet.</div>
+    }
+    else
+    {
+        <div class="qr-product-list">
+            @foreach (var item in Model.InventoryItems)
+            {
+                <div class="qr-product-row">
+                    <div class="qr-product-main">
+                        <span class="qr-product-sku">@item.Sku</span>
+                        <strong>@item.ProductName</strong>
+                        <small>@(item.CategoryName ?? "Uncategorized")@(string.IsNullOrWhiteSpace(item.Brand) ? string.Empty : $" / {item.Brand}")</small>
+                    </div>
+                    <div class="qr-product-meta">
+                        <strong>@item.Quantity</strong>
+                        <span>units</span>
+                    </div>
+                    <div class="qr-product-trace">
+                        <span>Lot: @(item.LotNumber ?? "-")</span>
+                        <span>Expiry: @(item.ExpiryDate?.ToString("dd/MM/yyyy") ?? "-")</span>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</article>
