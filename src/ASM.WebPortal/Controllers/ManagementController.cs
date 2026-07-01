@@ -666,19 +666,6 @@ public class ManagementController(
     }
 
     [HttpGet]
-    public IActionResult Qr() => View(new QrPageViewModel());
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> GenerateQr(QrPageViewModel model, CancellationToken cancellationToken)
-    {
-        model.GeneratedQr = await qrService.GenerateAsync(
-            new CreateQrRequest(model.TargetType, model.TargetId, model.Label),
-            cancellationToken);
-        return View("Qr", model);
-    }
-
-    [HttpGet]
     public async Task<IActionResult> DownloadQr(Guid qrId, CancellationToken cancellationToken)
     {
         var bytes = await qrService.RenderPngAsync(qrId, cancellationToken);

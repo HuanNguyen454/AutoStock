@@ -76,7 +76,7 @@ public class DashboardMapProductViewModel
 
 public class AdminDashboardPageViewModel
 {
-    public AdminDashboardSummaryDto Summary { get; set; } = new(0, 0, 0, 0, 0, 0, []);
+    public AdminDashboardSummaryDto Summary { get; set; } = new(0, 0, 0, 0, 0, 0, [], [], []);
     public IReadOnlyCollection<OwnerUsageSummaryDto> Owners { get; set; } = [];
 }
 
@@ -214,12 +214,12 @@ public class UsersPageViewModel
     public string Role { get; set; } = "Staff";
 }
 
-public class QrPageViewModel
+public class QrLookupPageViewModel
 {
-    public Guid TargetId { get; set; }
-    public QrTargetType TargetType { get; set; } = QrTargetType.Pallet;
-    public string Label { get; set; } = string.Empty;
-    public QrCodeDto? GeneratedQr { get; set; }
+    [Required(ErrorMessage = "Scan a QR code or enter its payload.")]
+    public string Payload { get; set; } = string.Empty;
+    public QrLookupResultDto? Result { get; set; }
+    public string? ErrorMessage { get; set; }
 }
 
 public class InboundPageViewModel

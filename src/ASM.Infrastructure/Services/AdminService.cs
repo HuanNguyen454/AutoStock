@@ -18,8 +18,34 @@ public class AdminService(
         EnsureAdmin();
 
         var last7Days = DateTime.UtcNow.AddDays(-7);
+        var last30Days = DateTime.UtcNow.AddDays(-30);
         var owners = await userManager.GetUsersInRoleAsync(RoleNames.Owner);
         var ownerIds = owners.Select(x => x.Id).ToArray();
+
+        var tenantIds = owners.Select(x => x.TenantId).Distinct().ToArray();
+        var tenantNames = await dbContext.Tenants
+            .Where(x => tenantIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.Name, cancellationToken);
+
+        var webAccesses = ownerIds.Length == 0
+            ? []
+            : await dbContext.AuditLogs
+                .Where(x => ownerIds.Contains(x.PerformedByUserId)
+                    && x.Action == "Login"
+                    && x.CreatedAtUtc >= last30Days)
+                .Select(x => new OwnerAccessEvent(x.PerformedByUserId, x.CreatedAtUtc))
+                .ToListAsync(cancellationToken);
+
+        var apiAccesses = ownerIds.Length == 0
+            ? []
+            : await dbContext.RefreshTokens
+                .Where(x => ownerIds.Contains(x.UserId) && x.CreatedAtUtc >= last30Days)
+                .Select(x => new OwnerAccessEvent(x.UserId, x.CreatedAtUtc))
+                .ToListAsync(cancellationToken);
+
+        var ownerAccesses = webAccesses.Concat(apiAccesses).ToList();
+        var weeklyOwnerAccess = BuildOwnerAccessSummary(owners, tenantNames, ownerAccesses, last7Days);
+        var monthlyOwnerAccess = BuildOwnerAccessSummary(owners, tenantNames, ownerAccesses, last30Days);
 
         var activeOwnersLast7Days = ownerIds.Length == 0
             ? 0
@@ -47,6 +73,8 @@ public class AdminService(
             await dbContext.AuditLogs.CountAsync(x => x.CreatedAtUtc >= last7Days, cancellationToken),
             totalOrdersLast7Days,
             await dbContext.ScanLogs.CountAsync(x => x.CreatedAtUtc >= last7Days, cancellationToken),
+            weeklyOwnerAccess,
+            monthlyOwnerAccess,
             alerts);
     }
 
@@ -284,4 +312,23 @@ public class AdminService(
             throw new InvalidOperationException("Only Admin can access platform administration.");
         }
     }
+
+    private static IReadOnlyCollection<OwnerAccessSummaryDto> BuildOwnerAccessSummary(
+        IEnumerable<AppUser> owners,
+        IReadOnlyDictionary<Guid, string> tenantNames,
+        IReadOnlyCollection<OwnerAccessEvent> accesses,
+        DateTime sinceUtc)
+    {
+        return owners
+            .Select(owner => new OwnerAccessSummaryDto(
+                owner.Id,
+                owner.FullName,
+                tenantNames.GetValueOrDefault(owner.TenantId) ?? "Unknown tenant",
+                accesses.Count(x => x.OwnerUserId == owner.Id && x.AccessedAtUtc >= sinceUtc)))
+            .OrderByDescending(x => x.AccessCount)
+            .ThenBy(x => x.OwnerFullName)
+            .ToList();
+    }
+
+    private sealed record OwnerAccessEvent(Guid OwnerUserId, DateTime AccessedAtUtc);
 }

@@ -2,6 +2,8 @@
 @model AdminDashboardPageViewModel
 @{
     ViewData["Title"] = "Admin Dashboard";
+    var weeklyAccessMax = Math.Max(1, Model.Summary.OwnerAccessLast7Days.Select(x => x.AccessCount).DefaultIfEmpty(0).Max());
+    var monthlyAccessMax = Math.Max(1, Model.Summary.OwnerAccessLast30Days.Select(x => x.AccessCount).DefaultIfEmpty(0).Max());
 }
 
 <section class="hero-card p-4 p-md-5 mb-4">
@@ -48,6 +50,68 @@
         <div class="dashboard-metric-value">@Model.Summary.TotalScansLast7Days</div>
         <div class="dashboard-metric-note">Warehouse scan traffic this week</div>
     </article>
+</section>
+
+<section class="panel-card owner-access-panel p-4 mb-4" data-owner-access-chart>
+    <div class="dashboard-section-head">
+        <div>
+            <div class="dashboard-section-title">Owner Access Frequency</div>
+            <div class="dashboard-section-subtitle">Successful web logins and authenticated API sessions for each Owner.</div>
+        </div>
+        <div class="owner-access-toggle" role="group" aria-label="Owner access period">
+            <button class="owner-access-toggle-button active" type="button" data-owner-access-toggle="week" aria-pressed="true">Last 7 days</button>
+            <button class="owner-access-toggle-button" type="button" data-owner-access-toggle="month" aria-pressed="false">Last 30 days</button>
+        </div>
+    </div>
+
+    <div class="owner-access-chart" data-owner-access-period="week">
+        @if (Model.Summary.OwnerAccessLast7Days.Count == 0)
+        {
+            <div class="dashboard-empty-state">No Owner accounts are available to track yet.</div>
+        }
+        @foreach (var access in Model.Summary.OwnerAccessLast7Days)
+        {
+            var width = access.AccessCount == 0 ? 0 : Math.Max(4, access.AccessCount * 100 / weeklyAccessMax);
+            <a class="owner-access-row" asp-controller="Admin" asp-action="Owner" asp-route-id="@access.OwnerUserId">
+                <div class="owner-access-identity">
+                    <strong>@access.OwnerFullName</strong>
+                    <span>@access.TenantName</span>
+                </div>
+                <div class="owner-access-bar-shell" aria-hidden="true">
+                    <div class="owner-access-bar" style="width: @width%"></div>
+                </div>
+                <div class="owner-access-count">
+                    <strong>@access.AccessCount</strong>
+                    <span>accesses</span>
+                </div>
+            </a>
+        }
+    </div>
+
+    <div class="owner-access-chart" data-owner-access-period="month" hidden>
+        @if (Model.Summary.OwnerAccessLast30Days.Count == 0)
+        {
+            <div class="dashboard-empty-state">No Owner accounts are available to track yet.</div>
+        }
+        @foreach (var access in Model.Summary.OwnerAccessLast30Days)
+        {
+            var width = access.AccessCount == 0 ? 0 : Math.Max(4, access.AccessCount * 100 / monthlyAccessMax);
+            <a class="owner-access-row" asp-controller="Admin" asp-action="Owner" asp-route-id="@access.OwnerUserId">
+                <div class="owner-access-identity">
+                    <strong>@access.OwnerFullName</strong>
+                    <span>@access.TenantName</span>
+                </div>
+                <div class="owner-access-bar-shell" aria-hidden="true">
+                    <div class="owner-access-bar owner-access-bar-month" style="width: @width%"></div>
+                </div>
+                <div class="owner-access-count">
+                    <strong>@access.AccessCount</strong>
+                    <span>accesses</span>
+                </div>
+            </a>
+        }
+    </div>
+
 </section>
 
 <div class="row g-4">
@@ -106,6 +170,10 @@
             </div>
 
             <div class="dashboard-alert-list">
+                @if (Model.Summary.Alerts.Count == 0)
+                {
+                    <div class="dashboard-empty-state">No recent scan alerts. Platform operations look healthy.</div>
+                }
                 @foreach (var alert in Model.Summary.Alerts)
                 {
                     <article class="dashboard-alert-card">

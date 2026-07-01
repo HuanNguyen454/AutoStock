@@ -1,0 +1,281 @@
+@using System.Linq
+@model QrLookupPageViewModel
+@{
+    ViewData["Title"] = "Scan QR";
+    var result = Model.Result;
+    var racks = result?.Areas.SelectMany(x => x.Racks).ToList() ?? [];
+    var slots = racks.SelectMany(x => x.Slots).ToList();
+    var pallets = slots.SelectMany(x => x.Pallets).Concat(result?.UnplacedPallets ?? []).ToList();
+    var totalProducts = pallets.SelectMany(x => x.InventoryItems).Count();
+    var totalQuantity = pallets.SelectMany(x => x.InventoryItems).Sum(x => x.Quantity);
+    var availableRacks = racks.Where(x => x.Slots.Count == 0 || x.Slots.Any(slot => !slot.IsOccupied)).ToList();
+    var emptySlots = racks
+        .SelectMany(rack => rack.Slots
+            .Where(slot => !slot.IsOccupied)
+            .Select(slot => new { RackName = rack.Name, SlotName = slot.Name }))
+        .ToList();
+}
+
+<section class="panel-card qr-lookup-scanner p-4 mb-4">
+    <form asp-action="Lookup" method="post" id="qrLookupForm">
+        <div class="qr-lookup-form-grid">
+            <div>
+                <label asp-for="Payload" class="form-label fw-semibold">QR payload</label>
+                <input asp-for="Payload" id="qrLookupPayload" class="form-control form-control-lg" placeholder="Scan with camera or paste the QR payload" autocomplete="off" />
+                <span asp-validation-for="Payload" class="text-danger small"></span>
+            </div>
+            <div class="qr-lookup-actions">
+                <button type="button" class="btn btn-dark btn-lg" id="qrLookupOpenCamera">Scan with camera</button>
+                <button type="submit" class="btn btn-outline-dark btn-lg">View information</button>
+            </div>
+        </div>
+    </form>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert alert-warning qr-lookup-alert" role="alert">
+        <strong>Unable to open this QR.</strong>
+        <span>@Model.ErrorMessage</span>
+    </div>
+}
+
+@if (result is not null)
+{
+    <section class="qr-result-summary mb-4">
+        <div class="qr-result-title-block">
+            <span class="qr-result-type">@result.TargetType</span>
+            <h2>@result.TargetName</h2>
+            <div class="qr-result-path">@result.LocationPath</div>
+        </div>
+        <div class="qr-result-metrics">
+            <div><strong>@racks.Count</strong><span>Racks</span></div>
+            <div><strong>@slots.Count</strong><span>Slots</span></div>
+            <div><strong>@pallets.Count</strong><span>Pallets</span></div>
+            <div><strong>@totalQuantity</strong><span>Units</span></div>
+        </div>
+    </section>
+
+    <section class="panel-card p-4 mb-4">
+        <div class="qr-warehouse-head">
+            <div>
+                <div class="qr-lookup-eyebrow">Warehouse</div>
+                <h2>@result.Warehouse.Name</h2>
+            </div>
+            <span class="qr-warehouse-code">@result.Warehouse.Code</span>
+        </div>
+        <div class="text-muted">@result.Warehouse.Address</div>
+    </section>
+
+    @if (result.TargetType is ASM.Domain.Enums.QrTargetType.Area or ASM.Domain.Enums.QrTargetType.Rack)
+    {
+        <section class="qr-availability-panel mb-4">
+            <div class="qr-availability-head">
+                <div>
+                    <div class="qr-lookup-eyebrow">Available locations</div>
+                    <h2>Empty Rack and Slot capacity</h2>
+                </div>
+                <div class="qr-availability-totals">
+                    <span><strong>@availableRacks.Count</strong> rack(s) available</span>
+                    <span><strong>@emptySlots.Count</strong> empty slot(s)</span>
+                </div>
+            </div>
+
+            @if (availableRacks.Count == 0 && emptySlots.Count == 0)
+            {
+                <div class="dashboard-empty-state">No empty Rack or Slot is available under this QR location.</div>
+            }
+            else
+            {
+                <div class="qr-availability-grid">
+                    @foreach (var rack in availableRacks)
+                    {
+                        var rackEmptySlots = rack.Slots.Count(slot => !slot.IsOccupied);
+                        <article class="qr-availability-rack">
+                            <span>Rack</span>
+                            <strong>@rack.Name</strong>
+                            <small>@(rack.Slots.Count == 0 ? "No Slots configured" : $"{rackEmptySlots} empty Slot(s)")</small>
+                        </article>
+                    }
+                    @foreach (var slot in emptySlots)
+                    {
+                        <article class="qr-availability-slot">
+                            <span>Empty Slot</span>
+                            <strong>@slot.SlotName</strong>
+                            <small>@slot.RackName</small>
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+    }
+
+    <div class="qr-hierarchy-stack">
+        @foreach (var area in result.Areas)
+        {
+            <section class="qr-area-card">
+                <header class="qr-hierarchy-head">
+                    <div>
+                        <span>Area</span>
+                        <h2>@area.Name</h2>
+                    </div>
+                    <strong>@area.Racks.Count rack(s)</strong>
+                </header>
+
+                @if (area.Racks.Count == 0)
+                {
+                    <div class="dashboard-empty-state">This Area does not contain any Racks yet.</div>
+                }
+
+                <div class="qr-rack-stack">
+                    @foreach (var rack in area.Racks)
+                    {
+                        <article class="qr-rack-card">
+                            <div class="qr-rack-head">
+                                <div><span>Rack</span><strong>@rack.Name</strong></div>
+                                <small>@rack.Slots.Count slot(s)</small>
+                            </div>
+
+                            @if (rack.Slots.Count == 0)
+                            {
+                                <div class="dashboard-empty-state">This Rack does not contain any Slots yet.</div>
+                            }
+
+                            <div class="qr-slot-grid">
+                                @foreach (var slot in rack.Slots)
+                                {
+                                    <section class="qr-slot-card @(slot.IsOccupied ? "occupied" : "empty")">
+                                        <div class="qr-slot-head">
+                                            <div><span>Slot</span><strong>@slot.Name</strong></div>
+                                            <span class="qr-slot-state">@(slot.IsOccupied ? "Occupied" : "Empty")</span>
+                                        </div>
+
+                                        @if (slot.Pallets.Count == 0)
+                                        {
+                                            <div class="qr-slot-empty">No pallet is currently assigned.</div>
+                                        }
+
+                                        @foreach (var pallet in slot.Pallets)
+                                        {
+                                            @await Html.PartialAsync("_QrLookupPallet", pallet)
+                                        }
+                                    </section>
+                                }
+                            </div>
+                        </article>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (result.UnplacedPallets.Count > 0)
+        {
+            <section class="qr-area-card qr-unplaced-card">
+                <header class="qr-hierarchy-head">
+                    <div>
+                        <span>Warehouse holding</span>
+                        <h2>Unplaced Pallet</h2>
+                    </div>
+                    <strong>Slot not assigned</strong>
+                </header>
+                @foreach (var pallet in result.UnplacedPallets)
+                {
+                    @await Html.PartialAsync("_QrLookupPallet", pallet)
+                }
+            </section>
+        }
+    </div>
+
+    @if (pallets.Count == 0)
+    {
+        <div class="dashboard-empty-state mt-4">No pallets or products were found under this QR location.</div>
+    }
+    else if (totalProducts == 0)
+    {
+        <div class="dashboard-empty-state mt-4">The pallet location is available, but it currently contains no products.</div>
+    }
+}
+
+<div class="camera-overlay" id="qrLookupCameraOverlay" aria-hidden="true">
+    <div class="camera-overlay-card">
+        <div class="camera-overlay-top">
+            <div>
+                <div class="camera-overlay-title">Scan warehouse QR</div>
+                <div class="camera-overlay-subtitle">Point the camera at an Area, Rack, Slot, or Pallet QR code.</div>
+            </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="qrLookupCameraClose">Close</button>
+        </div>
+        <div class="camera-overlay-shell">
+            <div id="qrLookupCameraReader" class="camera-overlay-reader"></div>
+            <div class="camera-overlay-tip">The information page opens automatically after a successful scan.</div>
+        </div>
+        <div class="camera-overlay-actions">
+            <button type="button" class="btn btn-dark" id="qrLookupCameraStart">Start camera</button>
+            <button type="button" class="btn btn-outline-secondary" id="qrLookupCameraStop">Stop camera</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script>
+        (() => {
+            const overlay = document.getElementById("qrLookupCameraOverlay");
+            const form = document.getElementById("qrLookupForm");
+            const payloadInput = document.getElementById("qrLookupPayload");
+            const openButton = document.getElementById("qrLookupOpenCamera");
+            const startButton = document.getElementById("qrLookupCameraStart");
+            const stopButton = document.getElementById("qrLookupCameraStop");
+            const closeButton = document.getElementById("qrLookupCameraClose");
+            const scanner = new Html5Qrcode("qrLookupCameraReader");
+
+            async function stopScanner() {
+                try {
+                    if (scanner.isScanning) {
+                        await scanner.stop();
+                    }
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+
+            async function closeCamera() {
+                await stopScanner();
+                overlay.classList.remove("open");
+                overlay.setAttribute("aria-hidden", "true");
+            }
+
+            async function startScanner() {
+                try {
+                    const cameras = await Html5Qrcode.getCameras();
+                    const selectedCamera = cameras.find(camera => /back|rear|environment/i.test(camera.label))
+                        ?.id || cameras[0]?.id || { facingMode: "environment" };
+
+                    await stopScanner();
+                    await scanner.start(
+                        selectedCamera,
+                        { fps: 10, qrbox: { width: 250, height: 250 } },
+                        async decodedText => {
+                            payloadInput.value = decodedText;
+                            await closeCamera();
+                            form.requestSubmit();
+                        });
+                } catch (error) {
+                    console.error(error);
+                    alert("Cannot open the camera. Please check camera permission or enter the QR payload manually.");
+                }
+            }
+
+            openButton.addEventListener("click", async () => {
+                overlay.classList.add("open");
+                overlay.setAttribute("aria-hidden", "false");
+                await startScanner();
+            });
+            startButton.addEventListener("click", startScanner);
+            stopButton.addEventListener("click", stopScanner);
+            closeButton.addEventListener("click", closeCamera);
+            window.addEventListener("beforeunload", stopScanner);
+        })();
+    </script>
+}
