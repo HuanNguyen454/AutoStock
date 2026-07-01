@@ -97,6 +97,12 @@ public interface IDashboardService
     Task<DashboardSummaryDto> GetSummaryAsync(CancellationToken cancellationToken);
 }
 
+public interface ITeamActivityService
+{
+    Task<TeamActivityChartDto> GetForCurrentOwnerAsync(Guid? warehouseId, int days, CancellationToken cancellationToken);
+    Task<TeamActivityChartDto?> GetForOwnerAsync(Guid ownerUserId, Guid? warehouseId, int days, CancellationToken cancellationToken);
+}
+
 public interface IAdminService
 {
     Task<AdminDashboardSummaryDto> GetDashboardAsync(CancellationToken cancellationToken);

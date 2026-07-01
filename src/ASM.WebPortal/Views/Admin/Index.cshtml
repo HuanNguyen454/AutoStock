@@ -114,6 +114,70 @@
 
 </section>
 
+<section class="panel-card team-activity-panel p-4 mb-4">
+    <div class="dashboard-section-head">
+        <div>
+            <div class="dashboard-section-title">Manager and Staff Activity by Owner</div>
+            <div class="dashboard-section-subtitle">Choose an Owner to review daily activity within that Owner's organization.</div>
+        </div>
+        @if (Model.OwnerOptions.Count > 0)
+        {
+            <form asp-action="Index" method="get" class="team-activity-filter">
+                <label for="teamOwnerId">Owner</label>
+                <select id="teamOwnerId" name="ownerId" class="form-select form-select-sm" data-team-owner-select>
+                    @foreach (var owner in Model.OwnerOptions)
+                    {
+                        if (owner.OwnerUserId == Model.SelectedOwnerId)
+                        {
+                            <option value="@owner.OwnerUserId" selected>@owner.OwnerFullName - @owner.TenantName</option>
+                        }
+                        else
+                        {
+                            <option value="@owner.OwnerUserId">@owner.OwnerFullName - @owner.TenantName</option>
+                        }
+                    }
+                </select>
+                <label for="adminTeamWarehouseId">Warehouse</label>
+                <select id="adminTeamWarehouseId" name="warehouseId" class="form-select form-select-sm" data-team-warehouse-select>
+                    @if (Model.TeamActivity?.WarehouseId is null)
+                    {
+                        <option value="" selected>All warehouses</option>
+                    }
+                    else
+                    {
+                        <option value="">All warehouses</option>
+                    }
+                    @foreach (var warehouse in Model.TeamActivity?.Warehouses ?? [])
+                    {
+                        if (warehouse.Id == Model.TeamActivity?.WarehouseId)
+                        {
+                            <option value="@warehouse.Id" selected>@warehouse.Name (@warehouse.Code)</option>
+                        }
+                        else
+                        {
+                            <option value="@warehouse.Id">@warehouse.Name (@warehouse.Code)</option>
+                        }
+                    }
+                </select>
+                <div class="team-activity-period" role="group" aria-label="Team activity period">
+                    <button type="submit" name="days" value="7" class="@(Model.TeamActivity?.Days == 7 ? "active" : string.Empty)">7 days</button>
+                    <button type="submit" name="days" value="30" class="@(Model.TeamActivity?.Days == 30 ? "active" : string.Empty)">30 days</button>
+                </div>
+            </form>
+        }
+    </div>
+
+    @if (Model.TeamActivity is { } adminTeamActivity)
+    {
+        <div class="team-activity-scope">Showing: <strong>@adminTeamActivity.TenantName</strong> / <strong>@adminTeamActivity.WarehouseName</strong></div>
+        <partial name="_TeamActivityChart" model="adminTeamActivity" />
+    }
+    else
+    {
+        <div class="dashboard-empty-state">No Owner is available for team activity tracking.</div>
+    }
+</section>
+
 <div class="row g-4">
     <div class="col-xl-7">
         <section class="panel-card p-4 h-100">

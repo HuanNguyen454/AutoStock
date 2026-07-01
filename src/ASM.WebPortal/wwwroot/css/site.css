@@ -1030,6 +1030,202 @@
   overflow: hidden;
 }
 
+.team-activity-panel {
+  overflow: hidden;
+}
+
+.team-activity-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.team-activity-filter label {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.team-activity-filter select {
+  width: min(290px, 70vw);
+}
+
+.team-activity-scope {
+  margin: -0.2rem 0 1rem;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.team-activity-period {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: #e9eff1;
+}
+
+.team-activity-period a,
+.team-activity-period button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.42rem 0.75rem;
+  background: transparent;
+  color: #52606d;
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.team-activity-period a.active,
+.team-activity-period button.active {
+  background: #183642;
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(24, 54, 66, 0.2);
+}
+
+.team-activity-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.team-activity-stat {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.15rem 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.team-activity-stat span {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.team-activity-stat strong {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  color: #102a43;
+  font-size: 1.55rem;
+}
+
+.team-activity-stat small {
+  color: #7b8a98;
+}
+
+.team-activity-stat.manager {
+  border-left: 4px solid #176b57;
+}
+
+.team-activity-stat.staff {
+  border-left: 4px solid #d58a22;
+}
+
+.team-activity-stat.total {
+  border-left: 4px solid #334155;
+}
+
+.team-activity-legend {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+  color: #52606d;
+  font-size: 0.8rem;
+}
+
+.team-activity-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.team-activity-legend i {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+}
+
+.team-activity-legend i.manager,
+.team-activity-segment.manager {
+  background: linear-gradient(180deg, #2f9b78, #176b57);
+}
+
+.team-activity-legend i.staff,
+.team-activity-segment.staff {
+  background: linear-gradient(180deg, #edb74e, #c77416);
+}
+
+.team-activity-scroll {
+  overflow-x: auto;
+  padding: 0.25rem 0 0.35rem;
+}
+
+.team-activity-chart {
+  display: grid;
+  align-items: end;
+  gap: 0.45rem;
+}
+
+.team-activity-column {
+  display: grid;
+  grid-template-rows: 22px 190px 22px;
+  align-items: end;
+  min-width: 0;
+}
+
+.team-activity-value {
+  align-self: center;
+  color: #64748b;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.team-activity-track {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  overflow: hidden;
+  height: 100%;
+  border-radius: 8px 8px 4px 4px;
+  background:
+    linear-gradient(to top, rgba(148, 163, 184, 0.12) 1px, transparent 1px) 0 0 / 100% 25%,
+    rgba(241, 245, 249, 0.72);
+}
+
+.team-activity-segment {
+  width: 100%;
+  min-height: 0;
+  transition: filter 0.2s ease;
+}
+
+.team-activity-column:hover .team-activity-segment {
+  filter: brightness(1.08);
+}
+
+.team-activity-label {
+  align-self: center;
+  color: #52606d;
+  text-align: center;
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.team-activity-label.muted {
+  color: transparent;
+}
+
 .owner-access-toggle {
   display: inline-flex;
   gap: 0.3rem;
@@ -1274,6 +1470,24 @@
   .owner-access-bar-shell {
     grid-column: 1 / -1;
     grid-row: 2;
+  }
+
+  .team-activity-filter {
+    width: 100%;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .team-activity-filter select {
+    width: 100%;
+  }
+
+  .team-activity-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .team-activity-period {
+    align-self: flex-start;
   }
 }
 
