@@ -7,15 +7,28 @@ using Microsoft.AspNetCore.Mvc;
 namespace ASM.WebPortal.Controllers;
 
 [Authorize(Roles = RoleNames.Admin)]
-public class AdminController(IAdminService adminService) : Controller
+public class AdminController(
+    IAdminService adminService,
+    ITeamActivityService teamActivityService) : Controller
 {
-    public async Task<IActionResult> Index(CancellationToken cancellationToken)
+    public async Task<IActionResult> Index(
+        Guid? ownerId,
+        Guid? warehouseId,
+        int days = 7,
+        CancellationToken cancellationToken = default)
     {
         var owners = await adminService.GetOwnersAsync(cancellationToken);
+        var selectedOwner = owners.FirstOrDefault(x => x.OwnerUserId == ownerId)
+            ?? owners.FirstOrDefault();
         return View(new AdminDashboardPageViewModel
         {
             Summary = await adminService.GetDashboardAsync(cancellationToken),
-            Owners = owners.OrderByDescending(x => x.LastActivityAtUtc).Take(5).ToList()
+            Owners = owners.OrderByDescending(x => x.LastActivityAtUtc).Take(5).ToList(),
+            OwnerOptions = owners,
+            SelectedOwnerId = selectedOwner?.OwnerUserId,
+            TeamActivity = selectedOwner is null
+                ? null
+                : await teamActivityService.GetForOwnerAsync(selectedOwner.OwnerUserId, warehouseId, days, cancellationToken)
         });
     }
 

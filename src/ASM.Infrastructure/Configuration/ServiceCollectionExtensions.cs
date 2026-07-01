@@ -64,6 +64,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IQrService, QrService>();
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<ITeamActivityService, TeamActivityService>();
         services.AddScoped<IAdminService, AdminService>();
 
         return services;

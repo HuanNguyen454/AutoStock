@@ -10,18 +10,23 @@ namespace ASM.WebPortal.Controllers;
 [Authorize(Roles = $"{RoleNames.Owner},{RoleNames.Manager}")]
 public class DashboardController(
     IDashboardService dashboardService,
+    ITeamActivityService teamActivityService,
+    ICurrentUserService currentUser,
     IOrderService orderService,
     IWarehouseService warehouseService,
     ICatalogService catalogService) : Controller
 {
-    public async Task<IActionResult> Index(CancellationToken cancellationToken)
+    public async Task<IActionResult> Index(Guid? warehouseId, int days = 7, CancellationToken cancellationToken = default)
     {
         var vm = new DashboardPageViewModel
         {
             Summary = await dashboardService.GetSummaryAsync(cancellationToken),
             InboundOrders = await orderService.GetInboundOrdersAsync(cancellationToken),
             OutboundOrders = await orderService.GetOutboundOrdersAsync(cancellationToken),
-            WarehouseMaps = await BuildWarehouseMapsAsync(cancellationToken)
+            WarehouseMaps = await BuildWarehouseMapsAsync(cancellationToken),
+            TeamActivity = currentUser.IsInRole(RoleNames.Owner)
+                ? await teamActivityService.GetForCurrentOwnerAsync(warehouseId, days, cancellationToken)
+                : null
         };
         return View(vm);
     }

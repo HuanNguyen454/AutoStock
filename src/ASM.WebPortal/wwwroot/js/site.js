@@ -23,3 +23,12 @@ document.querySelectorAll("[data-owner-access-chart]").forEach((chart) => {
         });
     });
 });
+
+document.querySelectorAll("[data-team-owner-select]").forEach((ownerSelect) => {
+    ownerSelect.addEventListener("change", () => {
+        const warehouseSelect = ownerSelect.form?.querySelector("[data-team-warehouse-select]");
+        if (warehouseSelect) {
+            warehouseSelect.value = "";
+        }
+    });
+});
