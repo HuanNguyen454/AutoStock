@@ -17,8 +17,9 @@ public class AdminService(
     {
         EnsureAdmin();
 
-        var last7Days = DateTime.UtcNow.AddDays(-7);
-        var last30Days = DateTime.UtcNow.AddDays(-30);
+        var todayUtc = DateTime.UtcNow.Date;
+        var last7Days = todayUtc.AddDays(-6);
+        var last30Days = todayUtc.AddDays(-29);
         var owners = await userManager.GetUsersInRoleAsync(RoleNames.Owner);
         var ownerIds = owners.Select(x => x.Id).ToArray();
 
@@ -90,8 +91,9 @@ public class AdminService(
 
         var ownerIds = owners.Select(x => x.Id).ToArray();
         var tenantIds = owners.Select(x => x.TenantId).Distinct().ToArray();
-        var last7Days = DateTime.UtcNow.AddDays(-7);
-        var last30Days = DateTime.UtcNow.AddDays(-30);
+        var todayUtc = DateTime.UtcNow.Date;
+        var last7Days = todayUtc.AddDays(-6);
+        var last30Days = todayUtc.AddDays(-29);
 
         var tenants = await dbContext.Tenants
             .Where(x => tenantIds.Contains(x.Id))
@@ -218,7 +220,7 @@ public class AdminService(
             .ToListAsync(cancellationToken);
 
         var activityPoints = (await dbContext.AuditLogs
-            .Where(x => x.TenantId == owner.TenantId && x.CreatedAtUtc >= DateTime.UtcNow.AddDays(-7))
+            .Where(x => x.TenantId == owner.TenantId && x.CreatedAtUtc >= DateTime.UtcNow.Date.AddDays(-6))
             .GroupBy(x => x.CreatedAtUtc.Date)
             .Select(x => new { x.Key, Count = x.Count() })
             .ToListAsync(cancellationToken))
