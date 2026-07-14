@@ -32,3 +32,32 @@ document.querySelectorAll("[data-team-owner-select]").forEach((ownerSelect) => {
         }
     });
 });
+
+document.querySelectorAll("[data-team-activity-filter]").forEach((form) => {
+    const daysInput = form.querySelector("[data-team-days-input]");
+    const daysButtons = form.querySelectorAll("[data-team-days-option]");
+
+    daysButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            if (daysInput) {
+                daysInput.value = button.value;
+            }
+
+            daysButtons.forEach((candidate) => {
+                const isSelected = candidate === button;
+                candidate.classList.toggle("active", isSelected);
+                candidate.setAttribute("aria-pressed", isSelected.toString());
+            });
+        });
+    });
+
+    form.addEventListener("submit", () => {
+        sessionStorage.setItem("asm:scroll-to-team-activity", "1");
+        form.action = `${window.location.pathname}#team-activity`;
+    });
+});
+
+if (window.location.hash === "#team-activity" || sessionStorage.getItem("asm:scroll-to-team-activity") === "1") {
+    sessionStorage.removeItem("asm:scroll-to-team-activity");
+    document.querySelector("[data-team-activity-section]")?.scrollIntoView({ block: "start" });
+}
