@@ -1087,6 +1087,13 @@
   box-shadow: 0 5px 14px rgba(24, 54, 66, 0.2);
 }
 
+.team-activity-search-button {
+  min-height: 2.15rem;
+  padding-inline: 1rem;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
 .team-activity-overview {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1479,6 +1486,10 @@
   }
 
   .team-activity-filter select {
+    width: 100%;
+  }
+
+  .team-activity-search-button {
     width: 100%;
   }
 
